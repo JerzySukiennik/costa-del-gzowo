@@ -9,7 +9,12 @@ const QUALITY = [['ultra', 'Ultra'], ['high', 'High'], ['medium', 'Medium']];
 const FOOT = [['Move', ['W', 'A', 'S', 'D']], ['Camera', ['Mouse']], ['Sprint', ['Shift']], ['Jump', ['Space']], ['Enter car', ['F']]];
 const CAR = [['Throttle and brake', ['W', 'S']], ['Steer', ['A', 'D']], ['Handbrake', ['Space']], ['Exit car', ['F']], ['Radio', ['Q', 'E']], ['Roof', ['T']], ['Lights', ['H']], ['Camera', ['C']], ['Reset car', ['R']]];
 const COMMON = [['Pause', ['Esc']], ['Map and menu', ['M']]];
-const AVATARS = [['Default', 'Everyday summer clothes'], ['Driver', 'Coming soon'], ['Swimmer', 'Coming soon'], ['Mechanic', 'Coming soon']];
+const AVATARS = [{ id: 'default', name: 'Default', note: 'Everyday summer clothes', figure: 'plain' }];
+const AVATARS_SOON = ['Driver', 'Swimmer'];
+const FIGURES = {
+  plain: '<svg viewBox="0 0 100 150"><circle cx="50" cy="32" r="17"/><path d="M14 150V96Q14 62 50 62Q86 62 86 96V150Z"/></svg>',
+  hood: '<svg viewBox="0 0 100 150"><path fill-rule="evenodd" d="M50 6Q79 6 80 42Q80 58 66 68H34Q20 58 20 42Q21 6 50 6ZM50 21Q35 21 35 41Q35 56 50 58Q65 56 65 41Q65 21 50 21Z"/><circle cx="50" cy="40" r="10.5"/><path d="M14 150V98Q14 64 50 64Q86 64 86 98V150Z"/></svg>',
+};
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const mix = (a, b, t) => a + (b - a) * t;
@@ -215,25 +220,43 @@ export function createScreens(options = {}) {
           readout)));
   }
 
-  function figure() {
+  function figure(kind) {
     const wrap = el('div', { class: 'sc-figure', 'aria-hidden': 'true' });
-    wrap.innerHTML = '<svg viewBox="0 0 100 150"><circle cx="50" cy="32" r="17"/><path d="M14 150V96Q14 62 50 62Q86 62 86 96V150Z"/></svg>';
+    wrap.innerHTML = FIGURES[kind] || FIGURES.plain;
     return wrap;
   }
 
-  function buildAvatarTab() {
-    const cards = AVATARS.map(([name, note], i) => {
-      if (i === 0) {
-        return el('button', { type: 'button', class: 'sc-avatar on', 'data-nav': '', 'aria-label': `${name}, selected` },
-          figure(), el('div', { class: 'sc-avatar-name', text: name }), el('div', { class: 'sc-avatar-note', text: note }),
-          el('div', { class: 'sc-avatar-tag', text: 'Selected' }));
-      }
-      return el('div', { class: 'sc-avatar dim', 'aria-disabled': 'true' },
-        figure(), el('div', { class: 'sc-avatar-name', text: name }), el('div', { class: 'sc-avatar-note', text: 'Coming soon' }));
-    });
-    return el('div', { class: 'sc-tab-panel', 'data-tab-panel': 'avatar' }, el('div', { class: 'sc-avatars' }, cards));
-  }
+  const avatarList = Array.isArray(cfg.avatars) && cfg.avatars.length ? cfg.avatars : AVATARS;
+  let avatarId = avatarList.some((a) => a.id === cfg.avatar) ? cfg.avatar : avatarList[0].id;
+  const mark = [];
 
+  function buildAvatarTab() {
+    const cards = avatarList.map((a) => {
+      const tag = el('div', { class: 'sc-avatar-tag', text: 'Selected' });
+      const card = el('button', {
+        type: 'button', class: 'sc-avatar', 'data-nav': '',
+        onclick: () => {
+          if (avatarId === a.id) return;
+          avatarId = a.id;
+          mark.forEach((fn) => fn());
+          cb('onAvatar', a.id);
+        },
+      }, figure(a.figure), el('div', { class: 'sc-avatar-name', text: a.name }), el('div', { class: 'sc-avatar-note', text: a.note }), tag);
+      const apply = () => {
+        const on = avatarId === a.id;
+        card.classList.toggle('on', on);
+        card.setAttribute('aria-pressed', String(on));
+        card.setAttribute('aria-label', on ? `${a.name}, selected` : a.name);
+        tag.style.visibility = on ? 'visible' : 'hidden';
+      };
+      mark.push(apply);
+      apply();
+      return card;
+    });
+    const soon = AVATARS_SOON.map((name) => el('div', { class: 'sc-avatar dim', 'aria-disabled': 'true' },
+      figure('plain'), el('div', { class: 'sc-avatar-name', text: name }), el('div', { class: 'sc-avatar-note', text: 'Coming soon' })));
+    return el('div', { class: 'sc-tab-panel', 'data-tab-panel': 'avatar' }, el('div', { class: 'sc-avatars' }, cards, soon));
+  }
   function spec(label, value, level) {
     return el('div', { class: 'sc-spec' },
       el('div', { class: 'sc-spec-head' }, el('span', { text: label }), el('span', { class: 'sc-spec-val', text: value })),

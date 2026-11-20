@@ -4,6 +4,7 @@ import { SPAWN, WORLD } from './config.js';
 import { GROUPS, groups } from './core/physics.js';
 import { heightAt } from './world/heightfield.js';
 import { createCharacter } from './player/character.js';
+import { createAvatars } from './player/avatars.js';
 import { createPlayer } from './player/controller.js';
 import { createCarModel } from './vehicle/carModel.js';
 import { createCarPhysics } from './vehicle/carPhysics.js';
@@ -25,6 +26,8 @@ export async function createGame(ctx) {
   const hud = createHud();
   const character = await createCharacter(ctx);
   scene.add(character.group);
+  const avatars = createAvatars(ctx, character);
+  if (ctx.avatar && ctx.avatar !== 'default') await avatars.set(ctx.avatar).catch((error) => console.warn('Avatar unavailable, using the default one.', error));
   const carModel = await createCarModel(ctx);
   scene.add(carModel.group);
   const car = createCarPhysics({ physics, terrain, model: carModel, spawn: SPAWN.car });
@@ -317,7 +320,7 @@ export async function createGame(ctx) {
   player.sync(0.016, { steer: 0, throttle: 0 });
 
   return {
-    game, update, hud, car, carModel, damage, player, character, rig, particles,
+    game, update, hud, car, carModel, damage, player, character, avatars, rig, particles,
     setWater(water) {
       game.water = water;
       car.setWater(water);

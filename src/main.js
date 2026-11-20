@@ -20,6 +20,7 @@ import { createAudio } from './audio/audio.js';
 import { createRadio } from './audio/radio.js';
 import { createCinematics } from './camera/cinematics.js';
 import { createScreens } from './ui/screens.js';
+import { AVATARS } from './player/avatars.js';
 
 const canvas = document.getElementById('view');
 const params = new URLSearchParams(location.search);
@@ -50,6 +51,8 @@ async function boot() {
   if (!QUALITY[quality]) quality = 'ultra';
   let volume = stored('costa-volume', 0.8);
   let musicVolume = stored('costa-music', 0.6);
+  let avatar = params.get('avatar') || localStorage.getItem('costa-avatar') || 'default';
+  if (!AVATARS.some((a) => a.id === avatar)) avatar = 'default';
   const hooks = {};
   const screens = createScreens({
     title: GAME.title,
@@ -57,6 +60,9 @@ async function boot() {
     quality,
     volume,
     musicVolume,
+    avatars: AVATARS,
+    avatar,
+    onAvatar: (id) => hooks.avatar && hooks.avatar(id),
     onGesture: () => hooks.gesture && hooks.gesture(),
     onStart: () => hooks.start && hooks.start(),
     onResume: () => hooks.resume && hooks.resume(),
@@ -99,7 +105,7 @@ async function boot() {
   await nextFrame();
   status('Building the bridge');
   const bridge = await createBridge({ assets, lighting, physics, scene, noise: terrain.noise });
-  const ctx = { renderer, scene, camera, assets, lighting, physics, terrain, input, quality, time: { value: 0 }, cull: [] };
+  const ctx = { renderer, scene, camera, assets, lighting, physics, terrain, input, quality, avatar, time: { value: 0 }, cull: [] };
   status('Growing trees');
   const trees = await createTrees(ctx);
   await nextFrame();
@@ -218,6 +224,11 @@ async function boot() {
     localStorage.setItem('costa-quality', quality);
     resize();
     pipeline.reset = true;
+  };
+  hooks.avatar = (id) => {
+    avatar = id;
+    localStorage.setItem('costa-avatar', id);
+    play.avatars.set(id).catch((error) => console.warn('Avatar unavailable.', error));
   };
   hooks.volume = (value) => {
     volume = value;

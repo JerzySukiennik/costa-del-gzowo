@@ -112,6 +112,45 @@ export async function createLighting({ renderer, scene, camera, assets }) {
     });
   }
 
+  let ambient = null;
+  function ambientCube() {
+    if (ambient) return ambient;
+    const { width, height } = sky.image;
+    const ground = envMaterial.uniforms.uGround.value.toArray();
+    const limit = envMaterial.uniforms.uMax.value;
+    const c = Math.cos(rotation);
+    const s = Math.sin(rotation);
+    const W = 256;
+    const H = 128;
+    const sum = Array.from({ length: 6 }, () => [0, 0, 0]);
+    for (let j = 0; j < H; j++) {
+      const theta = ((j + 0.5) / H) * Math.PI;
+      const y = Math.cos(theta);
+      const ring = Math.sin(theta);
+      const weight = ring * (Math.PI / H) * ((2 * Math.PI) / W);
+      const mixGround = THREE.MathUtils.smoothstep(-y, -0.03, 0.14);
+      for (let i = 0; i < W; i++) {
+        const phi = ((i + 0.5) / W) * Math.PI * 2;
+        const x = ring * Math.cos(phi);
+        const z = ring * Math.sin(phi);
+        const tx = x * c - z * s;
+        const tz = x * s + z * c;
+        const u = Math.atan2(tz, tx) * 0.15915494 + 0.5;
+        const v = Math.asin(y) * 0.31830989 + 0.5;
+        const px = Math.min(width - 1, Math.floor(u * width));
+        const py = Math.min(height - 1, Math.floor((1 - v) * height));
+        const o = (py * width + px) * 4;
+        const facing = [Math.max(x, 0), Math.max(-x, 0), Math.max(y, 0), Math.max(-y, 0), Math.max(z, 0), Math.max(-z, 0)];
+        for (let k = 0; k < 3; k++) {
+          const radiance = THREE.MathUtils.lerp(Math.min(data[o + k] * SKY_SCALE, limit), ground[k], mixGround);
+          for (let f = 0; f < 6; f++) sum[f][k] += radiance * facing[f] * weight;
+        }
+      }
+    }
+    ambient = sum.map((v) => new THREE.Vector3(v[0], v[1], v[2]).multiplyScalar(scene.environmentIntensity / Math.PI));
+    return ambient;
+  }
+
   let sunDepth = null;
   let tick = 0;
   function buildSunDepth(center, half, size = 4096) {
@@ -149,6 +188,7 @@ export async function createLighting({ renderer, scene, camera, assets }) {
     csm,
     register,
     registerTree,
+    ambientCube,
     buildSunDepth,
     get sunDepth() {
       return sunDepth;
