@@ -31,6 +31,7 @@ export function createAnimator(skel, group) {
   let accel = 0;
   let prevYaw = null;
   let turn = 0;
+  let along = 1;
   let shift = 0;
   let shiftTarget = 0;
   let shiftTimer = 3;
@@ -58,6 +59,9 @@ export function createAnimator(skel, group) {
       turn += ((st.turn ?? dy) - turn) * Math.min(1, dt * 6);
     }
     prevYaw = yaw;
+    const facing = st.heading === undefined || speed < 0.3 ? 1 : Math.max(0, Math.cos(st.heading - yaw));
+    along += (facing - along) * (dt > 0 ? Math.min(1, dt * 14) : 1);
+    const stride = speed * (0.4 + 0.6 * along);
     if (mode === 'air') airTime += dt;
     if (prevMode === 'air' && mode === 'foot') {
       land = Math.min(1, Math.max(0, (-prevVy - 2) / 9));
@@ -68,8 +72,8 @@ export function createAnimator(skel, group) {
     prevVy = vy;
     landT += dt;
 
-    const g = gaitParams(speed, wade);
-    phase = (phase + g.freq * dt * Math.min(1, speed / 0.35)) % 1;
+    const g = gaitParams(stride, wade);
+    phase = (phase + g.freq * dt * Math.min(1, stride / 0.35)) % 1;
     shiftTimer -= dt;
     if (shiftTimer <= 0) {
       shiftTimer = 3.5 + Math.random() * 5;
@@ -82,7 +86,7 @@ export function createAnimator(skel, group) {
     const idleP = basePose();
     idle(idleP, time, shift);
     const moveP = basePose();
-    gait(moveP, { speed: Math.max(speed, 0.0001), wade, phase }, g);
+    gait(moveP, { speed: Math.max(stride, 0.0001), wade, phase }, g);
     const mw = THREE.MathUtils.smoothstep(speed, 0.08, 0.7);
     for (const k of KEYS) foot[k] = idleP[k] + (moveP[k] - idleP[k]) * mw;
     if (landT < 0.9) {
@@ -101,11 +105,12 @@ export function createAnimator(skel, group) {
         for (const [t, s] of SIDES) legIK(foot, t, s, [s * 0.112, 0.061, 0.01], 0);
       }
     }
-    const lateral = turn * speed;
-    foot.leanRoll = -Math.atan(lateral / 9.81) * 0.75;
+    const steer = THREE.MathUtils.clamp(turn, -3.2, 3.2);
+    foot.leanRoll = -(0.05 + 0.15 * g.run) * Math.tanh((steer * speed) / 9) * mw;
     foot.hipsPitch += THREE.MathUtils.clamp(accel * 0.025, -0.12, 0.14) * mw;
     foot.spinePitch += THREE.MathUtils.clamp(accel * 0.02, -0.08, 0.1) * mw;
-    foot.headYaw += THREE.MathUtils.clamp(turn * 0.18, -0.4, 0.4);
+    foot.spineTwist += THREE.MathUtils.clamp(steer * 0.04, -0.12, 0.12) * mw;
+    foot.headYaw += THREE.MathUtils.clamp(steer * 0.09, -0.28, 0.28);
 
     if (weights.air > 0.001 || mode === 'air') {
       Object.assign(poses.air, basePose());

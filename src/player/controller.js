@@ -117,7 +117,8 @@ export function createPlayer({ physics, character, spawn }) {
     character.group.position.set(state.position.x, state.position.y + state.swimLift, state.position.z);
     character.group.rotation.set(0, state.yaw, 0);
     const mode = state.mode === 'swim' ? 'swim' : state.grounded || airTime < 0.12 ? 'foot' : 'air';
-    character.update(dt, { mode, speed: state.speed, vy: state.vy, wade: state.wade });
+    const heading = state.speed > 0.3 ? Math.atan2(state.velocity.x, state.velocity.z) : state.yaw;
+    character.update(dt, { mode, speed: state.speed, vy: state.vy, wade: state.wade, heading });
   }
 
   return {
