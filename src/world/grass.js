@@ -210,7 +210,7 @@ export function createGrass(ctx, { density = 1 } = {}) {
         uSpan: { value: n * step }, uHeights: { value: new THREE.Vector2(...heights) }, uChannel: { value: channel }, uWind: { value: wind },
         uPushA: shared.uPushA, uPushB: shared.uPushB, uBaseColor: { value: new THREE.Color(...base) }, uTipColor: { value: new THREE.Color(...tip) },
         uDryColor: { value: new THREE.Color(...dry) }, uSunDir: { value: lighting.sunDirection }, uSunColor: { value: lighting.sunColor },
-        uSkyColor: { value: new THREE.Color(0.4, 0.47, 0.62) }, tShadow: shared.tShadow, uShadowMatrix: shared.uShadowMatrix, uShadowOn: shared.uShadowOn,
+        uSkyColor: { value: new THREE.Color(0.34, 0.45, 0.54) }, tShadow: shared.tShadow, uShadowMatrix: shared.uShadowMatrix, uShadowOn: shared.uShadowOn,
         uCarInv: shared.uCarInv, uBody: shared.uBody,
       },
     });

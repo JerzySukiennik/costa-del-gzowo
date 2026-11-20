@@ -8,7 +8,7 @@ import urllib.request
 ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "assets")
 UA = {"User-Agent": "asset-fetch/1.0"}
 
-HDRIS = {"kloofendal_48d_partly_cloudy_puresky": "4k"}
+HDRIS = {"wasteland_clouds_puresky": "4k"}
 
 TEXTURES = {
     "asphalt_02": "2k",

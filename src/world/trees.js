@@ -483,6 +483,13 @@ export async function createTrees(ctx) {
     }
   }
 
+  function forceMeshes() {
+    for (const t of managed) {
+      t.holders.forEach((h, i) => (h.holder.visible = i === t.holders.length - 1));
+      t.level = 99;
+    }
+  }
+
   scene.add(group);
-  return { group, heroSpots, update };
+  return { group, heroSpots, update, forceMeshes };
 }

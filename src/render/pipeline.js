@@ -117,7 +117,7 @@ void main() {
   vec3 ray = wp.xyz / wp.w - uCamPos;
   float dist = length(ray);
   vec3 dir = ray / dist;
-  if (d >= 0.999999) dist = 1500.0;
+  if (d >= 0.999999) dist = 700.0;
   float marchDist = min(dist, uMaxDist);
   const int STEPS = 14;
   float stepLen = marchDist / float(STEPS);
@@ -283,7 +283,7 @@ void main() {
     }
   }
   float avg = exp(sum / wsum);
-  float target = clamp(pow(0.5 / avg, 0.55), 0.62, 1.7);
+  float target = clamp(pow(0.45 / avg, 0.55), 0.6, 1.7);
   float prev = texture(tPrev, vec2(0.5)).r;
   outColor = vec4(uReset > 0.5 ? target : mix(prev, target, uRate), 0.0, 0.0, 1.0);
 }`;
@@ -310,6 +310,7 @@ uniform float uGlare;
 uniform float uVibrance;
 uniform vec3 uShadowTint;
 uniform vec3 uHighlightTint;
+uniform float uOlive;
 vec3 agxContrast(vec3 x) {
   vec3 x2 = x * x;
   vec3 x4 = x2 * x2;
@@ -362,7 +363,7 @@ void main() {
   c *= 1.0 + uSharpen * clamp((lc - ln) / max(max(lc, ln), 0.001), -0.5, 0.5);
   vec3 bloom = texture(tBloom, vUv).rgb / 6.0;
   c = mix(c, bloom, uBloom);
-  c += max(bloom - 1.1, vec3(0.0)) * uGlare;
+  c += max(bloom - 0.9, vec3(0.0)) * uGlare * vec3(1.0, 0.8, 0.55);
   c += flare(vUv) * max(luma(bloom), 0.6);
   c *= 1.0 - uVignette * pow(dot(q, q) * 2.0, 1.35);
   c *= uExposure * texture(tAdapt, vec2(0.5)).r * uTint;
@@ -372,9 +373,13 @@ void main() {
   c = l + uSaturation * (c - l);
   float vib = max(c.g, c.b) - c.r;
   c = l + (c - l) * (1.0 + uVibrance * clamp(vib * 2.0, 0.0, 1.0));
+  float green = max(c.g - max(c.r, c.b), 0.0);
+  c.r += green * uOlive;
+  c.b -= green * uOlive * 0.25;
   c = agxOut(c);
   c = clamp(c, 0.0, 1.0);
   float lum = luma(c);
+  c = lum + (c - lum) * (1.0 + 0.22 * smoothstep(0.42, 0.9, lum));
   c += uShadowTint * (1.0 - smoothstep(0.0, 0.42, lum)) + uHighlightTint * smoothstep(0.5, 1.0, lum);
   float grain = fract(sin(dot(gl_FragCoord.xy + fract(uTime) * 61.7, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
   c += grain * uGrain * (1.0 - 0.6 * lum);
@@ -424,17 +429,17 @@ export class Pipeline {
     this.fogMat = mat(FOG_FRAG, {
       tColor: tex(), tDepth: tex(), tShadow: tex(), uInvViewProj: m4(), uShadowMatrix: m4(),
       uCamPos: { value: new THREE.Vector3() }, uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSunColor: { value: new THREE.Color(1, 1, 1) },
-      uSkyColor: { value: new THREE.Color(0.3, 0.38, 0.54) }, uDensity: { value: 0.001 }, uFalloff: { value: 0.045 }, uBaseY: { value: 0 },
-      uAniso: { value: 0.72 }, uFrame: { value: 0 }, uShadowOn: { value: 0 }, uMaxDist: { value: 240 },
+      uSkyColor: { value: new THREE.Color(0.19, 0.2, 0.24) }, uDensity: { value: 0.00095 }, uFalloff: { value: 0.035 }, uBaseY: { value: 0 },
+      uAniso: { value: 0.78 }, uFrame: { value: 0 }, uShadowOn: { value: 0 }, uMaxDist: { value: 240 },
     });
     this.taaMat = mat(TAA_FRAG, { tCurrent: tex(), tHistory: tex(), tDepth: tex(), uInvViewProj: m4(), uPrevViewProj: m4(), uTexel: v2(), uReset: { value: 1 } });
     this.downMat = mat(BLOOM_DOWN_FRAG, { tSrc: tex(), uTexel: v2(), uFirst: { value: 0 } });
     this.upMat = mat(BLOOM_UP_FRAG, { tSrc: tex(), uTexel: v2() }, { blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor, blendEquation: THREE.AddEquation });
     this.finalMat = mat(FINAL_FRAG, {
       tColor: tex(), tBloom: tex(), uTexel: v2(), uExposure: { value: 0.5 }, uBloom: { value: 0.055 }, uSharpen: { value: 0.55 }, uTime: { value: 0 },
-      uVignette: { value: 0.17 }, uGrain: { value: 0.02 }, uSaturation: { value: 1.22 }, uContrast: { value: 1.2 }, uTint: { value: new THREE.Color(1.035, 1.0, 0.95) }, uFade: { value: 1 },
-      tAdapt: tex(), tSunDepth: tex(), uSun: { value: new THREE.Vector3() }, uAberration: { value: 0.0035 }, uGlare: { value: 0.05 }, uVibrance: { value: 0.28 },
-      uShadowTint: { value: new THREE.Vector3(-0.012, 0.004, 0.02) }, uHighlightTint: { value: new THREE.Vector3(0.014, 0.006, -0.012) },
+      uVignette: { value: 0.2 }, uGrain: { value: 0.018 }, uSaturation: { value: 1.3 }, uContrast: { value: 1.23 }, uTint: { value: new THREE.Color(1.035, 1.0, 0.955) }, uFade: { value: 1 },
+      tAdapt: tex(), tSunDepth: tex(), uSun: { value: new THREE.Vector3() }, uAberration: { value: 0.0035 }, uGlare: { value: 0.08 }, uVibrance: { value: 0.3 }, uOlive: { value: 0.3 },
+      uShadowTint: { value: new THREE.Vector3(-0.02, 0.008, 0.036) }, uHighlightTint: { value: new THREE.Vector3(0.036, 0.014, -0.032) },
     });
     this.motionMat = mat(MOTION_FRAG, { tColor: tex(), tDepth: tex(), uInvViewProj: m4(), uPrevViewProj: m4(), uStrength: { value: 0.5 } });
     this.adaptMat = mat(ADAPT_FRAG, { tSmall: tex(), tPrev: tex(), uRate: { value: 0.05 }, uReset: { value: 1 } });
@@ -634,7 +639,7 @@ export class Pipeline {
     fu.tBloom.value = t.down[0].texture;
     fu.tAdapt.value = adaptCur.texture;
     fu.tSunDepth.value = t.scene.depthTexture;
-    fu.uBloom.value = this.settings.bloom ? 0.06 : 0;
+    fu.uBloom.value = this.settings.bloom ? 0.065 : 0;
     fu.uExposure.value = this.exposure;
     fu.uTime.value = this.time;
     fu.uFade.value = this.fade;

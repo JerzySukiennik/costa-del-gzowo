@@ -151,7 +151,7 @@ export async function createBridge({ assets, lighting, physics, scene, noise }) 
     rail: new THREE.MeshStandardMaterial({ ...railMaps, metalness: 0.35, roughness: 0.9, color: 0xd9dbd6 }),
     steel: new THREE.MeshStandardMaterial({ color: 0x2a2b2d, metalness: 0.8, roughness: 0.55 }),
     galvanized: new THREE.MeshStandardMaterial({ color: 0x8f9396, metalness: 0.85, roughness: 0.48 }),
-    lens: new THREE.MeshStandardMaterial({ color: 0xdfe3e6, roughness: 0.25, metalness: 0 }),
+    lens: new THREE.MeshStandardMaterial({ color: 0xdfe3e6, roughness: 0.25, metalness: 0, emissive: new THREE.Color(1.0, 0.72, 0.38), emissiveIntensity: 14 }),
   };
   mat.rail.metalnessMap = null;
   Object.values(mat).forEach((m) => lighting.register(m));

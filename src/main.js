@@ -82,6 +82,7 @@ async function boot() {
   ctx.props = await createProps(ctx);
   const skyline = createSkyline(ctx);
 
+  trees.forceMeshes();
   const sun = lighting.buildSunDepth(new THREE.Vector3(0, 0, 0), 190);
   pipeline.setSunShadow(sun.texture, sun.matrix);
   ctx.grass.setShadow(sun.texture, sun.matrix);
