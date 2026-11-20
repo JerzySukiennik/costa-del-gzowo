@@ -5,17 +5,13 @@ import { GROUPS, groups } from './core/physics.js';
 import { heightAt } from './world/heightfield.js';
 import { createCharacter } from './player/character.js';
 import { createPlayer } from './player/controller.js';
-import { createCarModel } from './vehicle/carModel.js';
-import { createCarPhysics } from './vehicle/carPhysics.js';
-import { createCarDamage } from './vehicle/carDamage.js';
+import { createVehicle } from './vehicle/vehicles.js';
 import { createCameraRig } from './camera/rig.js';
 import { createParticles } from './fx/particles.js';
 import { createSkidmarks } from './fx/skidmarks.js';
 import { createHud } from './ui/hud.js';
 
 const STEP = 1 / 120;
-const DOOR_LOCAL = new THREE.Vector3(0.3, 0, -1.55);
-const EXIT_LOCAL = new THREE.Vector3(0.25, 0, -1.75);
 
 export async function createGame(ctx) {
   const { scene, camera, physics, terrain, input, props, grass } = ctx;
@@ -25,21 +21,21 @@ export async function createGame(ctx) {
   const hud = createHud();
   const character = await createCharacter(ctx);
   scene.add(character.group);
-  const carModel = await createCarModel(ctx);
+  const vehicle = await createVehicle(ctx, new URLSearchParams(location.search).get('car') || 'convertible', SPAWN.car, { physics, terrain, scene, particles, audio });
+  const carModel = vehicle.model;
   scene.add(carModel.group);
-  const car = createCarPhysics({ physics, terrain, model: carModel, spawn: SPAWN.car });
-  const damage = createCarDamage({ physics, scene, model: carModel, car, particles, audio });
+  const car = vehicle.car;
+  const damage = vehicle.damage;
   const player = createPlayer({ physics, character, spawn: SPAWN.player });
   const rig = createCameraRig({ camera, physics });
   rig.rig.yaw = SPAWN.player.yaw;
 
   const game = { mode: 'foot', transition: null, beams: false, water: null, time: 0 };
+  const entry = vehicle.bindEntry({ character, player, rig, game, groundBelow, onSeated: () => (exitHint = 4) });
   const moveInput = { x: 0, z: 0, sprint: false, jump: false };
   const f = new THREE.Vector3();
   const v = new THREE.Vector3();
-  const v2 = new THREE.Vector3();
   const doorWorld = new THREE.Vector3();
-  const seatWorld = new THREE.Vector3();
   const ray = new physics.RAPIER.Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 });
   const interactors = [];
   const carInteractor = { id: 'car', kind: 'vehicle', position: new THREE.Vector3(), velocity: new THREE.Vector3(), radius: 2.4, halfExtents: new THREE.Vector3(2.3, 0.6, 0.92), quaternion: new THREE.Quaternion(), submersion: 0 };
@@ -64,88 +60,20 @@ export async function createGame(ctx) {
   }
 
   function seatCharacter() {
-    carModel.group.add(character.group);
-    character.group.position.copy(carModel.seat);
-    character.group.rotation.set(0, Math.PI / 2, 0);
+    entry.seat();
   }
 
   function beginEnter() {
-    game.transition = { type: 'enter', t: 0, from: character.group.position.clone(), yaw: character.group.rotation.y };
-    player.setEnabled(false);
-    player.state.mode = 'car';
-    carModel.setDoor('doorFL', true);
-    if (audio) audio.door(true);
+    if (entry.begin('enter')) game.transition = entry;
   }
 
   function beginExit() {
-    game.transition = { type: 'exit', t: 0 };
-    carModel.setDoor('doorFL', true);
-    car.state.occupied = false;
-    if (audio) audio.door(true);
+    if (entry.begin('exit')) game.transition = entry;
   }
 
   function updateTransition(dt) {
-    const tr = game.transition;
-    if (!tr) return;
-    tr.t += dt;
-    if (tr.type === 'enter') {
-      if (tr.t > 0.3 && game.mode !== 'car') {
-        game.mode = 'car';
-        rig.setMode('car');
-      }
-      if (tr.t >= 0.4 && !tr.attached) {
-        tr.attached = true;
-        scene.attach(character.group);
-        carModel.group.attach(character.group);
-        tr.local = character.group.position.clone();
-      }
-      if (tr.attached) {
-        const k = Math.min(1, (tr.t - 0.4) / 0.5);
-        const e = k * k * (3 - 2 * k);
-        character.group.position.lerpVectors(tr.local, carModel.seat, e);
-        character.group.rotation.set(0, THREE.MathUtils.lerp(character.group.rotation.y, Math.PI / 2, e), 0);
-      }
-      if (tr.t > 0.95 && !tr.closed) {
-        tr.closed = true;
-        carModel.setDoor('doorFL', false);
-        if (audio) audio.door(false);
-      }
-      if (tr.t > 1.35) {
-        seatCharacter();
-        car.state.occupied = true;
-        game.transition = null;
-        exitHint = 4;
-      }
-    } else {
-      v.copy(EXIT_LOCAL);
-      carModel.group.localToWorld(v);
-      if (tr.t >= 0.4 && !tr.detached) {
-        tr.detached = true;
-        tr.local = character.group.position.clone();
-      }
-      if (tr.detached && tr.t < 0.95) {
-        const k = Math.min(1, (tr.t - 0.4) / 0.5);
-        const e = k * k * (3 - 2 * k);
-        character.group.position.lerpVectors(tr.local, v2.copy(EXIT_LOCAL).setY(0.05), e);
-      }
-      if (tr.t >= 0.95 && !tr.out) {
-        tr.out = true;
-        const p = carModel.group.position;
-        const ground = groundBelow(v.x, p.y + 1.6, v.z);
-        const y = ground !== null ? ground : p.y - 0.3;
-        scene.attach(character.group);
-        const yaw = Math.atan2(car.forward.x, car.forward.z);
-        player.state.mode = 'foot';
-        player.teleport(v.x, y + 0.02, v.z, yaw);
-        player.setEnabled(true);
-        game.mode = 'foot';
-        rig.rig.yaw = yaw;
-        rig.setMode('foot');
-        carModel.setDoor('doorFL', false);
-        if (audio) audio.door(false);
-      }
-      if (tr.t > 1.3) game.transition = null;
-    }
+    entry.update(dt, { steer: car.state.steer / 0.6, throttle: car.state.throttle });
+    game.transition = entry.busy ? entry : null;
   }
 
   function tyreEffects(dt) {
@@ -227,7 +155,7 @@ export async function createGame(ctx) {
     car.controls.steer = inCar ? -strafe : 0;
     car.controls.handbrake = inCar && input.key('Space');
 
-    doorWorld.copy(DOOR_LOCAL);
+    doorWorld.copy(entry.doorLocal);
     carModel.group.localToWorld(doorWorld);
     const nearDoor = game.mode === 'foot' && !game.transition && doorWorld.distanceTo(player.center(v)) < 2.3;
     if (input.hit('KeyF') && !game.transition) {
