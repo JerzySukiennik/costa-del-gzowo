@@ -1,4 +1,4 @@
-// Riverside water: shared GLSL chunks (bake lookup, ambient undulation, optics, shadow, depth reconstruction, noise).
+// Costa del Gzowo water: shared GLSL chunks (bake lookup, ambient undulation, optics, shadow, depth reconstruction, noise).
 
 export const GLSL_CONSTANTS = `
 #define PI 3.141592653589793

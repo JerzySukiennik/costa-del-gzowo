@@ -1,4 +1,4 @@
-// Riverside: helper that injects world-space varyings and custom color/roughness snippets into standard materials.
+// Costa del Gzowo: helper that injects world-space varyings and custom color/roughness snippets into standard materials.
 export function hookMaterial(material, { key, uniforms = {}, pars = '', fragPars = null, color = '', rough = '', normal = '', vertex = '', physical = '', emissive = '', final = '', dynamic = false }) {
   material.userData.customShader = true;
   material.customProgramCacheKey = () => key + (dynamic ? '-dyn' : '');

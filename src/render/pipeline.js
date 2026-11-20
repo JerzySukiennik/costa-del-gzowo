@@ -1,4 +1,4 @@
-// Riverside: HDR frame pipeline (opaque pass, AO, water/transparent composite, volumetric fog, TAA, bloom, grade).
+// Costa del Gzowo: HDR frame pipeline (opaque pass, AO, water/transparent composite, volumetric fog, TAA, bloom, grade).
 import * as THREE from 'three';
 import { LAYERS } from '../config.js';
 

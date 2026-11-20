@@ -1,4 +1,4 @@
-// Riverside: assembles the convertible (deformable panels, paint and glass shaders, lights, roof mechanism, doors, wheels, interior).
+// Costa del Gzowo: assembles the convertible (deformable panels, paint and glass shaders, lights, roof mechanism, doors, wheels, interior).
 import * as THREE from 'three';
 import { buildBody, CAR, MAT } from './carBody.js';
 import { buildWheelAssets, buildWheel, buildInterior, buildExterior, plateTexture } from './carParts.js';

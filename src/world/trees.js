@@ -1,4 +1,4 @@
-// Riverside: trees with mesh LODs that end in baked impostors, procedural palms, small trees and the far impostor forest.
+// Costa del Gzowo: trees with mesh LODs that end in baked impostors, procedural palms, small trees and the far impostor forest.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { heightAt } from './heightfield.js';

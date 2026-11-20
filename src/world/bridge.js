@@ -1,4 +1,4 @@
-// Riverside: road strip and the concrete girder bridge (deck, girders, piers, abutments, railings, lamps) with colliders.
+// Costa del Gzowo: road strip and the concrete girder bridge (deck, girders, piers, abutments, railings, lamps) with colliders.
 import * as THREE from 'three';
 import { BRIDGE, ROAD } from '../config.js';
 import { roadY, heightAt } from './heightfield.js';

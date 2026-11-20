@@ -1,4 +1,4 @@
-// Riverside water: fullscreen underwater pass (spectral absorption fog, sun shafts with shadow, caustics on submerged geometry, wobble, waterline split).
+// Costa del Gzowo water: fullscreen underwater pass (spectral absorption fog, sun shafts with shadow, caustics on submerged geometry, wobble, waterline split).
 import * as THREE from 'three';
 import { FullscreenPass, passMaterial } from '../gpu.js';
 import { GLSL_CONSTANTS, GLSL_HASH, GLSL_BAKE, GLSL_UNDULATION, GLSL_OPTICS, GLSL_SHADOW, GLSL_CAUSTICS } from '../glsl/common.js';

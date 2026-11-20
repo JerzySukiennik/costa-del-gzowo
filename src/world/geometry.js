@@ -1,4 +1,4 @@
-// Riverside: small procedural geometry helpers (extrusions with world-scale UVs, boxes, merging).
+// Costa del Gzowo: small procedural geometry helpers (extrusions with world-scale UVs, boxes, merging).
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 

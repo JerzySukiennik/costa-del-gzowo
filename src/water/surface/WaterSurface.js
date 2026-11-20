@@ -1,4 +1,4 @@
-// Riverside water: camera-centred radial surface mesh and its material wiring (bake, sim, spectrum, caustics, reflection, scene buffers).
+// Costa del Gzowo water: camera-centred radial surface mesh and its material wiring (bake, sim, spectrum, caustics, reflection, scene buffers).
 import * as THREE from 'three';
 import { SURFACE_VERT, SURFACE_FRAG } from './surfaceShader.js';
 

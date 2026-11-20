@@ -1,4 +1,4 @@
-// Riverside: minimal stand-in water surface used only when the full water system fails to start.
+// Costa del Gzowo: minimal stand-in water surface used only when the full water system fails to start.
 import * as THREE from 'three';
 import { LAYERS, WORLD } from '../config.js';
 

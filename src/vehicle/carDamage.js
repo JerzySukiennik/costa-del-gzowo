@@ -1,4 +1,4 @@
-// Riverside: persistent vehicle damage (mesh dents, paint scratches, cracked glass, broken lights, loose and detached panels, engine health).
+// Costa del Gzowo: persistent vehicle damage (mesh dents, paint scratches, cracked glass, broken lights, loose and detached panels, engine health).
 import * as THREE from 'three';
 import { GROUPS, groups } from '../core/physics.js';
 

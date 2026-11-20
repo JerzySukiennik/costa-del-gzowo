@@ -1,4 +1,4 @@
-// Riverside water: suspended silt and plankton motes in a camera-wrapped volume, drifting with the current, visible only underwater.
+// Costa del Gzowo water: suspended silt and plankton motes in a camera-wrapped volume, drifting with the current, visible only underwater.
 import * as THREE from 'three';
 import { GLSL_CONSTANTS, GLSL_HASH, GLSL_SCENE, GLSL_OPTICS } from '../glsl/common.js';
 

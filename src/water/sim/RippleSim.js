@@ -1,4 +1,4 @@
-// Riverside water: GPU two-band heightfield wave simulation in a camera-following window (shore/obstacle walls, current advection, foam).
+// Costa del Gzowo water: GPU two-band heightfield wave simulation in a camera-following window (shore/obstacle walls, current advection, foam).
 import * as THREE from 'three';
 import { FullscreenPass, passMaterial, makeTarget, saveState, restoreState } from '../gpu.js';
 import { ADVECT_FRAG, AUX_FRAG, STEP_FRAG, MAX_IMPULSES, MAX_INTERACTORS, MAX_OBSTACLES } from './simShaders.js';

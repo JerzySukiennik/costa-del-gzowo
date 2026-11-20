@@ -1,4 +1,4 @@
-// Riverside: HDRI sky, sun with cascaded shadows, image-based lighting and the static sun depth map.
+// Costa del Gzowo: HDRI sky, sun with cascaded shadows, image-based lighting and the static sun depth map.
 import * as THREE from 'three';
 import { CSM } from 'three/addons/csm/CSM.js';
 import { LAYERS } from '../config.js';

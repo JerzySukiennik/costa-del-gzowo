@@ -1,4 +1,4 @@
-// Riverside water: GLSL for the camera-following two-band wave simulation (advection, wave step, foam/turbulence update).
+// Costa del Gzowo water: GLSL for the camera-following two-band wave simulation (advection, wave step, foam/turbulence update).
 import { GLSL_BAKE, GLSL_HASH } from '../glsl/common.js';
 
 export const MAX_IMPULSES = 64;

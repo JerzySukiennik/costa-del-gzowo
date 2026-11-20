@@ -1,4 +1,4 @@
-// Riverside: headless Chrome (real GPU via ANGLE/Metal) screenshots with console capture.
+// Costa del Gzowo: headless Chrome (real GPU via ANGLE/Metal) screenshots with console capture.
 // node shot.mjs <url> <outPrefix> [steps.json | inline setup JS] [waitMs] [width] [height]
 // steps.json: [{ "js": "...", "wait": 1500, "shot": "name" }, ...]; each step evaluates js, waits, then saves <outPrefix>-<name>.png.
 import { createRequire } from 'node:module';

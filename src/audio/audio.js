@@ -1,4 +1,4 @@
-// Riverside: game audio from real recordings (engine layers, tyres, impacts, water, ambience, footsteps) mixed by gameplay state.
+// Costa del Gzowo: game audio from real recordings (engine layers, tyres, impacts, water, ambience, footsteps) mixed by gameplay state.
 import { WORLD } from '../config.js';
 import { riverCenter, riverHalfWidth } from '../world/heightfield.js';
 import { GROUND } from '../world/terrain.js';
@@ -94,6 +94,54 @@ export async function createAudio(ctx) {
   let cameraRef = ctx.camera;
   let started = false;
   let scrapeLevel = 0;
+  function stream() {
+    const element = new Audio();
+    element.preload = 'auto';
+    const s = {
+      element, level: 0, target: 0, rate: 1, url: '', failed: false, onEnded: null, onError: null,
+      play(url, { offset = 0, loop = true } = {}) {
+        s.failed = false;
+        element.loop = loop;
+        if (s.url !== url) {
+          s.url = url;
+          element.src = url;
+        }
+        const begin = () => {
+          const length = Number.isFinite(element.duration) ? element.duration : 0;
+          element.currentTime = length > 2 ? Math.min(offset, length - 2) : 0;
+          const result = element.play();
+          if (result && result.catch) result.catch(() => {});
+        };
+        if (element.readyState >= 1) begin();
+        else element.addEventListener('loadedmetadata', begin, { once: true });
+      },
+      fade(level, seconds = 1) {
+        s.target = level;
+        s.rate = 1 / Math.max(seconds, 0.05);
+        if (level > 0 && element.paused && s.url && !s.failed) {
+          const result = element.play();
+          if (result && result.catch) result.catch(() => {});
+        }
+      },
+      tick(dt, volume) {
+        const diff = s.target - s.level;
+        if (diff !== 0) s.level += Math.sign(diff) * Math.min(Math.abs(diff), dt * s.rate);
+        element.volume = clamp(s.level * volume, 0, 1);
+        if (s.level === 0 && s.target === 0 && !element.paused) element.pause();
+      },
+    };
+    element.addEventListener('error', () => {
+      s.failed = true;
+      if (s.onError) s.onError();
+    });
+    element.addEventListener('ended', () => {
+      if (s.onEnded) s.onEnded();
+    });
+    return s;
+  }
+  const music = stream();
+  const radio = stream();
+  let musicVolume = 0.6;
 
   function spatial(point) {
     if (!point || !cameraRef) return { gain: 1, pan: 0 };
@@ -153,6 +201,15 @@ export async function createAudio(ctx) {
     },
     setVolume(v) {
       master.gain.setTargetAtTime(v, ac.currentTime, 0.05);
+    },
+    music,
+    radio,
+    setMusicVolume(v) {
+      musicVolume = v;
+    },
+    tickMusic(dt) {
+      music.tick(dt, musicVolume);
+      radio.tick(dt, musicVolume);
     },
     crash(dv, kind, point) {
       const soft = kind === 'plastic' || kind === 'soft' || kind === 'rubber';

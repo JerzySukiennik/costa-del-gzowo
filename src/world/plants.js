@@ -1,4 +1,4 @@
-// Riverside: scattered undergrowth, rocks, riprap and woody debris (instanced photoscans).
+// Costa del Gzowo: scattered undergrowth, rocks, riprap and woody debris (instanced photoscans).
 import * as THREE from 'three';
 import { LAYERS, BRIDGE } from '../config.js';
 import { heightAt } from './heightfield.js';

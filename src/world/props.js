@@ -1,4 +1,4 @@
-// Riverside: roadside props (cones, barriers, signs, road-closed ends, pull-off clutter, buoys, utility poles) with physics.
+// Costa del Gzowo: roadside props (cones, barriers, signs, road-closed ends, pull-off clutter, buoys, utility poles) with physics.
 import * as THREE from 'three';
 import { BRIDGE, ROAD, WORLD } from '../config.js';
 import { GROUPS, groups } from '../core/physics.js';

@@ -1,4 +1,4 @@
-// Riverside: on-foot player controller (kinematic capsule with walking, sprinting, jumping, wading and swimming).
+// Costa del Gzowo: on-foot player controller (kinematic capsule with walking, sprinting, jumping, wading and swimming).
 import * as THREE from 'three';
 import { WORLD } from '../config.js';
 import { GROUPS, groups } from '../core/physics.js';

@@ -1,4 +1,4 @@
-// Riverside water harness: stand-in world (terrain from heightAt, bridge deck and piers, bank trees, shallows plants, HDR sky, sun with shadows).
+// Costa del Gzowo water harness: stand-in world (terrain from heightAt, bridge deck and piers, bank trees, shallows plants, HDR sky, sun with shadows).
 import * as THREE from 'three';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { BRIDGE, LAYERS, WATER_OBSTACLES, WORLD } from '../../config.js';

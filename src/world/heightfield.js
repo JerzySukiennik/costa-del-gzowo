@@ -1,4 +1,4 @@
-// Riverside: analytic terrain height and river flow, shared by terrain mesh, physics, vegetation and water.
+// Costa del Gzowo: analytic terrain height and river flow, shared by terrain mesh, physics, vegetation and water.
 import { BRIDGE, ROAD, WORLD } from '../config.js';
 
 export const clamp = (x, a, b) => Math.min(b, Math.max(a, x));

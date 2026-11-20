@@ -1,4 +1,4 @@
-// Riverside water: public WaterSystem facade wiring the bake, surface, reflection, wave sim, splash FX and underwater pass.
+// Costa del Gzowo water: public WaterSystem facade wiring the bake, surface, reflection, wave sim, splash FX and underwater pass.
 import * as THREE from 'three';
 import { LAYERS, WORLD } from '../config.js';
 import { WaterBake } from './WaterBake.js';

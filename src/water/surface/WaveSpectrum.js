@@ -1,4 +1,4 @@
-// Riverside water: GPU FFT wind-ripple spectrum (fine + coarse tiled layers) baked each frame into mipmapped slope/slope-variance maps.
+// Costa del Gzowo water: GPU FFT wind-ripple spectrum (fine + coarse tiled layers) baked each frame into mipmapped slope/slope-variance maps.
 import * as THREE from 'three';
 import { FullscreenPass, passMaterial, makeTarget } from '../gpu.js';
 

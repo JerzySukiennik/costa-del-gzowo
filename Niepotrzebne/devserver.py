@@ -1,4 +1,4 @@
-# Riverside: local dev server with caching off, so every reload picks up edited modules.
+# Costa del Gzowo: local dev server with caching off, so every reload picks up edited modules.
 import functools, http.server, os, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

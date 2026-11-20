@@ -1,4 +1,4 @@
-// Riverside water: physically based caustic map (refracted light-grid splatting) for two reference depths, tileable with the fine ripple layer.
+// Costa del Gzowo water: physically based caustic map (refracted light-grid splatting) for two reference depths, tileable with the fine ripple layer.
 import * as THREE from 'three';
 import { makeTarget, saveState, restoreState } from '../gpu.js';
 

@@ -1,4 +1,4 @@
-// Riverside water: one-time GPU generation of tileable foam (lace, bubbles, streaks, blobs) and current-boil height/gradient textures.
+// Costa del Gzowo water: one-time GPU generation of tileable foam (lace, bubbles, streaks, blobs) and current-boil height/gradient textures.
 import * as THREE from 'three';
 import { FullscreenPass, passMaterial, makeTarget, saveState, restoreState } from '../gpu.js';
 import { GLSL_HASH } from '../glsl/common.js';

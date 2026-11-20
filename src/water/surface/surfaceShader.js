@@ -1,4 +1,4 @@
-// Riverside water: river surface vertex/fragment shaders (multi-scale flow-advected normals, refraction, absorption, caustics, reflections, glints, foam, underside).
+// Costa del Gzowo water: river surface vertex/fragment shaders (multi-scale flow-advected normals, refraction, absorption, caustics, reflections, glints, foam, underside).
 import { GLSL_CONSTANTS, GLSL_HASH, GLSL_BAKE, GLSL_UNDULATION, GLSL_OPTICS, GLSL_SHADOW, GLSL_SCENE, GLSL_CAUSTICS } from '../glsl/common.js';
 
 const SIM_SAMPLING = `

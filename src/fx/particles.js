@@ -1,4 +1,4 @@
-// Riverside: lightweight CPU particle pools (sparks, smoke, dust, debris chips, glass) drawn as soft point sprites.
+// Costa del Gzowo: lightweight CPU particle pools (sparks, smoke, dust, debris chips, glass) drawn as soft point sprites.
 import * as THREE from 'three';
 import { LAYERS } from '../config.js';
 

@@ -1,4 +1,4 @@
-// Riverside: procedural sports sedan body, lofted from side-view profiles into separate deformable panels.
+// Costa del Gzowo: procedural sports sedan body, lofted from side-view profiles into separate deformable panels.
 import * as THREE from 'three';
 
 export const CAR = {

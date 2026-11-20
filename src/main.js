@@ -1,6 +1,6 @@
-// Riverside: bootstrap, loading flow, settings and the main loop.
+// Costa del Gzowo: bootstrap, loading flow, title cinematics, pause and menu states, main loop.
 import * as THREE from 'three';
-import { LAYERS, WATER_OBSTACLES } from './config.js';
+import { GAME, LAYERS, MUSIC, WATER_OBSTACLES } from './config.js';
 import { Assets } from './core/assets.js';
 import { createPhysics } from './core/physics.js';
 import { createInput } from './core/input.js';
@@ -17,18 +17,18 @@ import { createFallbackWater } from './world/fallbackWater.js';
 import { heightAt, flowAt } from './world/heightfield.js';
 import { createGame } from './game.js';
 import { createAudio } from './audio/audio.js';
+import { createRadio } from './audio/radio.js';
+import { createCinematics } from './camera/cinematics.js';
+import { createScreens } from './ui/screens.js';
 
 const canvas = document.getElementById('view');
 const params = new URLSearchParams(location.search);
-const statusEl = document.getElementById('boot-status');
-const fillEl = document.getElementById('boot-fill');
-const goEl = document.getElementById('boot-go');
-const bootEl = document.getElementById('boot');
-const menuEl = document.getElementById('menu');
 const QUALITY = { ultra: { ratio: 1.25, scale: 1 }, high: { ratio: 1, scale: 1 }, medium: { ratio: 1, scale: 0.72 } };
-
-const status = (text) => (statusEl.textContent = text);
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+const stored = (key, fallback) => {
+  const value = parseFloat(localStorage.getItem(key));
+  return Number.isFinite(value) ? value : fallback;
+};
 
 async function startWater(ctx, obstacles) {
   try {
@@ -46,6 +46,33 @@ async function startWater(ctx, obstacles) {
 }
 
 async function boot() {
+  let quality = params.get('quality') || localStorage.getItem('costa-quality') || 'ultra';
+  if (!QUALITY[quality]) quality = 'ultra';
+  let volume = stored('costa-volume', 0.8);
+  let musicVolume = stored('costa-music', 0.6);
+  const hooks = {};
+  const screens = createScreens({
+    title: GAME.title,
+    cssHref: 'src/ui/screens.css',
+    quality,
+    volume,
+    musicVolume,
+    onGesture: () => hooks.gesture && hooks.gesture(),
+    onStart: () => hooks.start && hooks.start(),
+    onResume: () => hooks.resume && hooks.resume(),
+    onResetCar: () => hooks.resetCar && hooks.resetCar(),
+    onQuality: (value) => hooks.quality && hooks.quality(value),
+    onVolume: (value) => hooks.volume && hooks.volume(value),
+    onMusicVolume: (value) => hooks.musicVolume && hooks.musicVolume(value),
+    onMenuClose: () => hooks.resume && hooks.resume(),
+  });
+  let progress = 0;
+  let statusText = 'Loading';
+  const status = (text) => {
+    statusText = text;
+    screens.setProgress(progress, statusText);
+  };
+
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false, depth: false, alpha: false });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NoToneMapping;
@@ -56,10 +83,11 @@ async function boot() {
   const camera = new THREE.PerspectiveCamera(55, 16 / 9, 0.12, 4000);
   camera.layers.enable(LAYERS.DETAIL);
   const assets = new Assets(renderer);
-  assets.onProgress = (done, total) => (fillEl.style.width = `${Math.round((done / Math.max(total, 1)) * 92)}%`);
+  assets.onProgress = (done, total) => {
+    progress = Math.min(0.94, done / Math.max(total, 1));
+    screens.setProgress(progress, statusText);
+  };
   const input = createInput(canvas);
-  let quality = params.get('quality') || localStorage.getItem('riverside-quality') || 'ultra';
-  if (!QUALITY[quality]) quality = 'ultra';
 
   status('Starting physics');
   const physics = await createPhysics();
@@ -92,6 +120,8 @@ async function boot() {
 
   status('Loading sound');
   ctx.audio = await createAudio(ctx);
+  ctx.audio.setVolume(volume);
+  ctx.audio.setMusicVolume(musicVolume);
   status('Preparing the car');
   const play = await createGame(ctx);
   status('Filling the river');
@@ -99,6 +129,10 @@ async function boot() {
   if (water.setSunShadow) water.setSunShadow(sun.texture, sun.matrix);
   pipeline.water = water;
   play.setWater(water);
+  ctx.radio = await createRadio({ audio: ctx.audio });
+  const cinematics = createCinematics({ camera, pipeline, lighting });
+  play.game.cinematic = true;
+  play.character.group.visible = false;
 
   function resize() {
     const w = window.innerWidth;
@@ -117,27 +151,140 @@ async function boot() {
   window.addEventListener('resize', resize);
   resize();
 
-  let running = false;
+  let mode = 'title';
   let paused = false;
   let elapsed = 0;
   let frames = 0;
   let fps = 60;
+  let fade = null;
   const clock = new THREE.Clock();
+
+  function lock() {
+    if (params.has('auto') || !canvas.requestPointerLock) return;
+    const result = canvas.requestPointerLock();
+    if (result && result.catch) result.catch(() => {});
+  }
+
+  function mapState() {
+    const p = play.player.state;
+    const onFoot = play.game.mode === 'foot';
+    const carYaw = Math.atan2(play.car.forward.x, play.car.forward.z);
+    const car = { x: play.car.position.x, z: play.car.position.z, yaw: carYaw };
+    return { player: onFoot ? { x: p.position.x, z: p.position.z, yaw: p.yaw } : { ...car }, car };
+  }
+
+  function setPaused(on) {
+    if (paused === on) return;
+    paused = on;
+    if (on && document.exitPointerLock) document.exitPointerLock();
+    ctx.audio.setPaused(on);
+    ctx.radio.pause(on);
+    const music = ctx.audio.music;
+    if (on && music.url !== MUSIC.menu.url) {
+      music.level = 0;
+      music.play(MUSIC.menu.url, { loop: true });
+    }
+    music.fade(on ? 0.5 : 0, on ? 0.8 : 1);
+    clock.getDelta();
+  }
+
+  hooks.gesture = () => {
+    ctx.audio.start();
+    ctx.audio.music.onError = () => screens.setTrack(null);
+    ctx.audio.music.play(MUSIC.title.url, { loop: true });
+    ctx.audio.music.fade(1, 1.5);
+    screens.setTrack({ title: MUSIC.title.title, artist: MUSIC.title.artist });
+  };
+  hooks.start = () => {
+    if (mode !== 'title') return;
+    mode = 'starting';
+    fade = { t: 0, switched: false };
+    ctx.audio.start();
+    ctx.audio.music.fade(0, 4);
+  };
+  hooks.resume = () => {
+    setPaused(false);
+    lock();
+  };
+  hooks.resetCar = () => {
+    if (play.car.state.submersion > 0.3 || play.car.position.y < -1) play.car.respawn();
+    else play.car.reset();
+    screens.hidePause();
+    hooks.resume();
+  };
+  hooks.quality = (value) => {
+    if (!QUALITY[value]) return;
+    quality = value;
+    localStorage.setItem('costa-quality', quality);
+    resize();
+    pipeline.reset = true;
+  };
+  hooks.volume = (value) => {
+    volume = value;
+    localStorage.setItem('costa-volume', String(value));
+    ctx.audio.setVolume(value);
+  };
+  hooks.musicVolume = (value) => {
+    musicVolume = value;
+    localStorage.setItem('costa-music', String(value));
+    ctx.audio.setMusicVolume(value);
+  };
+
+  window.addEventListener('keydown', (e) => {
+    if (mode !== 'playing' || paused || e.defaultPrevented) return;
+    if (e.code === 'Escape') {
+      setPaused(true);
+      screens.showPause();
+    } else if (e.code === 'KeyM' || e.code === 'Tab') {
+      e.preventDefault();
+      setPaused(true);
+      screens.setMap(mapState());
+      screens.openMenu('map');
+    }
+  });
+  document.addEventListener('pointerlockchange', () => {
+    if (mode === 'playing' && !document.pointerLockElement && !paused && !params.has('auto')) {
+      setPaused(true);
+      screens.showPause();
+    }
+  });
+
+  function updateFade(dt) {
+    if (!fade) return;
+    fade.t += dt;
+    if (!fade.switched) {
+      pipeline.fade = Math.max(0, 1 - fade.t / 0.45);
+      if (fade.t >= 0.45) {
+        fade.switched = true;
+        fade.t = 0;
+        mode = 'playing';
+        cinematics.stop();
+        play.game.cinematic = false;
+        play.character.group.visible = true;
+        play.hud.show();
+        lock();
+      }
+    } else {
+      pipeline.fade = Math.min(1, fade.t / 0.8);
+      if (fade.t >= 0.8) fade = null;
+    }
+  }
 
   function frame() {
     requestAnimationFrame(frame);
     const raw = clock.getDelta();
     const dt = Math.min(raw, 0.05);
     fps += (1 / Math.max(raw, 0.001) - fps) * 0.05;
+    ctx.audio.tickMusic(Math.min(raw, 0.1));
     renderer.info.reset();
     if (!paused) {
       elapsed += dt;
       ctx.time.value = elapsed;
-      if (running) play.update(dt, elapsed);
-      else {
-        play.rig.update(dt, input, play.player, play.car, water);
+      updateFade(dt);
+      play.update(dt, elapsed);
+      if (play.game.cinematic) {
+        cinematics.update(dt);
         ctx.grass.update(camera.position);
-        input.endFrame();
       }
       trees.update(camera.position);
       for (const c of ctx.cull) c.object.visible = (c.x - camera.position.x) ** 2 + (c.z - camera.position.z) ** 2 < c.range * c.range;
@@ -147,69 +294,32 @@ async function boot() {
     frames++;
     if (frames === 4) {
       window.__ready = true;
-      fillEl.style.width = '100%';
-      status('Ready');
-      goEl.hidden = false;
-      if (params.has('auto')) start();
+      screens.setProgress(1, 'Ready');
+      screens.ready();
+      if (params.has('auto')) {
+        const press = () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+        press();
+        setTimeout(() => {
+          if (document.activeElement && document.activeElement.click) document.activeElement.click();
+        }, 150);
+      }
     }
   }
 
-  function lock() {
-    if (!canvas.requestPointerLock) return;
-    const result = canvas.requestPointerLock();
-    if (result && result.catch) result.catch(() => {});
-  }
-
-  function start() {
-    if (running) return;
-    running = true;
-    bootEl.classList.add('out');
-    play.hud.show();
-    if (ctx.audio) ctx.audio.start();
-    if (!params.has('auto')) lock();
-  }
-  goEl.addEventListener('click', start);
-
-  const qualityEl = document.getElementById('opt-quality');
-  const volumeEl = document.getElementById('opt-volume');
-  qualityEl.value = quality;
-  function setPaused(on) {
-    paused = on;
-    menuEl.hidden = !on;
-    if (on && document.exitPointerLock) document.exitPointerLock();
-    if (ctx.audio) ctx.audio.setPaused(on);
-    clock.getDelta();
-  }
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Escape' && running) setPaused(!paused);
-  });
-  document.addEventListener('pointerlockchange', () => {
-    if (running && !document.pointerLockElement && !paused && !params.has('auto')) setPaused(true);
-  });
-  document.getElementById('menu-resume').addEventListener('click', () => {
-    setPaused(false);
-    lock();
-  });
-  qualityEl.addEventListener('change', () => {
-    quality = qualityEl.value;
-    localStorage.setItem('riverside-quality', quality);
-    resize();
-  });
-  volumeEl.addEventListener('input', () => {
-    if (ctx.audio) ctx.audio.setVolume(+volumeEl.value);
-  });
-
   window.__dbg = {
-    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, skyline, water, play, input, ctx,
+    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, skyline, water, play, input, ctx, screens, cinematics,
     get fps() {
       return Math.round(fps);
     },
+    get mode() {
+      return mode;
+    },
     look(px, py, pz, tx, ty, tz) {
-      running = false;
+      play.game.cinematic = true;
+      cinematics.update = () => {};
       camera.position.set(px, py, pz);
       camera.lookAt(tx, ty, tz);
       pipeline.reset = true;
-      play.rig.update = () => {};
     },
   };
   requestAnimationFrame(frame);
@@ -218,5 +328,4 @@ async function boot() {
 boot().catch((error) => {
   console.error(error);
   window.__error = String(error && error.stack ? error.stack : error);
-  status('Failed to start: ' + error.message);
 });

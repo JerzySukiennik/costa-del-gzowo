@@ -1,4 +1,4 @@
-// Riverside: camera-following instanced grass, shoreline reeds and underwater eelgrass with wind and body push.
+// Costa del Gzowo: camera-following instanced grass, shoreline reeds and underwater eelgrass with wind and body push.
 import * as THREE from 'three';
 import { LAYERS, WORLD } from '../config.js';
 import { rng } from './scatter.js';

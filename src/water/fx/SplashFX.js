@@ -1,4 +1,4 @@
-// Riverside water: turns splash events and per-frame interactors into droplets, spray sheets, mist, bubble plumes and sim impulses.
+// Costa del Gzowo water: turns splash events and per-frame interactors into droplets, spray sheets, mist, bubble plumes and sim impulses.
 import { KIND } from './ParticlePool.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);

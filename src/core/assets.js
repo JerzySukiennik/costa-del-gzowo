@@ -1,4 +1,4 @@
-// Riverside: asset loading (PBR texture sets, HDR sky, meshopt GLB models, audio buffers) with progress tracking.
+// Costa del Gzowo: asset loading (PBR texture sets, HDR sky, meshopt GLB models, audio buffers) with progress tracking.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';

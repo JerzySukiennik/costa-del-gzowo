@@ -1,4 +1,4 @@
-// Riverside: deterministic scattering helpers, placement rules and model baking for instancing.
+// Costa del Gzowo: deterministic scattering helpers, placement rules and model baking for instancing.
 import * as THREE from 'three';
 import { BRIDGE, ROAD, WORLD } from '../config.js';
 import { heightAt, trackInfo } from './heightfield.js';

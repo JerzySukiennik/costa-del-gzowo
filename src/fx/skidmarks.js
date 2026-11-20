@@ -1,4 +1,4 @@
-// Riverside: persistent tyre skid marks drawn as a ring-buffered ribbon on hard surfaces.
+// Costa del Gzowo: persistent tyre skid marks drawn as a ring-buffered ribbon on hard surfaces.
 import * as THREE from 'three';
 
 export function createSkidmarks(scene, max = 2400) {

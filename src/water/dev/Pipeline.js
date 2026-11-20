@@ -1,4 +1,4 @@
-// Riverside water harness: minimal replica of the lead render contract (reflection, opaque HDR+depth, copy, water layer, underwater, bloom, tone map).
+// Costa del Gzowo water harness: minimal replica of the lead render contract (reflection, opaque HDR+depth, copy, water layer, underwater, bloom, tone map).
 import * as THREE from 'three';
 import { LAYERS } from '../../config.js';
 import { FullscreenPass, passMaterial } from '../gpu.js';

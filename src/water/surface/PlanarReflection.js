@@ -1,4 +1,4 @@
-// Riverside water: half-resolution HDR planar reflection with an oblique near plane and an unjittered mirrored camera.
+// Costa del Gzowo water: half-resolution HDR planar reflection with an oblique near plane and an unjittered mirrored camera.
 import * as THREE from 'three';
 import { saveState, restoreState } from '../gpu.js';
 

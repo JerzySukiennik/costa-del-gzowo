@@ -1,4 +1,4 @@
-// Riverside water harness: simple stand-in bodies (jumping character, falling or wading car) that feed splash and interactor data to the water.
+// Costa del Gzowo water harness: simple stand-in bodies (jumping character, falling or wading car) that feed splash and interactor data to the water.
 import * as THREE from 'three';
 import { LAYERS } from '../../config.js';
 import { heightAt } from '../../world/heightfield.js';

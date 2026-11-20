@@ -1,4 +1,4 @@
-// Riverside: vehicle dynamics (raycast suspension, combined-slip tyres, AWD drivetrain with automatic gearbox, brakes with ABS, aero, buoyancy).
+// Costa del Gzowo: vehicle dynamics (raycast suspension, combined-slip tyres, AWD drivetrain with automatic gearbox, brakes with ABS, aero, buoyancy).
 import * as THREE from 'three';
 import { WORLD } from '../config.js';
 import { GROUPS, groups } from '../core/physics.js';

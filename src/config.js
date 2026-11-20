@@ -1,4 +1,30 @@
-// Riverside: shared world constants (meters, Y up, river flows toward +Z, bridge runs along X at z = 0).
+// Costa del Gzowo: shared world constants (meters, Y up, river flows toward +Z, bridge runs along X at z = 0).
+
+export const GAME = {
+  title: 'Costa del Gzowo',
+};
+
+export const MUSIC = {
+  title: { url: 'assets/music/love-is-a-long-road.mp3', title: 'Love Is a Long Road', artist: 'Tom Petty and the Heartbreakers' },
+  menu: { url: 'assets/music/hot-together.mp3', title: 'Hot Together', artist: 'The Pointer Sisters' },
+};
+
+export const RADIO = [
+  { id: 'riviera', name: 'Riviera', frequency: '107.1', genre: 'French House' },
+  { id: 'costa-club', name: 'Costa Club', frequency: '99.9', genre: 'House' },
+  { id: 'euro-9x', name: 'Euro 9X', frequency: '93.3', genre: 'Eurodance' },
+  { id: 'funk-narew', name: 'Funk Narew', frequency: '96.4', genre: 'Disco and Funk' },
+  { id: 'moonwalk', name: 'Moonwalk FM', frequency: '102.5', genre: 'King of Pop' },
+  { id: 'narew-rock', name: 'Narew Rock', frequency: '98.6', genre: 'Rock' },
+  { id: 'costa-fm', name: 'Costa FM', frequency: '101.2', genre: '80s Pop' },
+  { id: 'zlota-godzina', name: 'Złota Godzina', frequency: '104.8', genre: 'Synth' },
+  { id: 'blok', name: 'Blok', frequency: '90.5', genre: 'Hip-Hop' },
+  { id: 'filharmonia', name: 'Filharmonia', frequency: '88.1', genre: 'Score' },
+  { id: 'renifer', name: 'Radio Renifer', frequency: '100.0', genre: 'Christmas' },
+  { id: 'szanghaj', name: 'Szanghaj FM', frequency: '95.0', genre: 'C-Pop' },
+  { id: 'fala-prl', name: 'Fala PRL', frequency: '89.4', genre: 'Polish Classics' },
+  { id: 'gzowo-labs', name: 'Gzowo Labs Radio', frequency: '108.0', genre: 'Homemade' },
+];
 
 export const WORLD = {
   waterLevel: 0,

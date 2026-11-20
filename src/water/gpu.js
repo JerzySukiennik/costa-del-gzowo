@@ -1,4 +1,4 @@
-// Riverside water: fullscreen pass helper, render target factory and renderer state save/restore.
+// Costa del Gzowo water: fullscreen pass helper, render target factory and renderer state save/restore.
 import * as THREE from 'three';
 
 const triangle = new THREE.BufferGeometry();

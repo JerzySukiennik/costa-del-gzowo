@@ -1,4 +1,4 @@
-// Riverside: third-person camera rig (orbit on foot, chase in the car) with lag, collision avoidance, speed FOV, shake and blended transitions.
+// Costa del Gzowo: third-person camera rig (orbit on foot, chase in the car) with lag, collision avoidance, speed FOV, shake and blended transitions.
 import * as THREE from 'three';
 import { WORLD } from '../config.js';
 import { GROUPS, groups } from '../core/physics.js';

@@ -1,4 +1,4 @@
-# Riverside: downloads the CC0 Poly Haven assets listed below into assets/ (skips files that already exist).
+# Costa del Gzowo: downloads the CC0 Poly Haven assets listed below into assets/ (skips files that already exist).
 import concurrent.futures as cf
 import json
 import os

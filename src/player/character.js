@@ -1,4 +1,4 @@
-// Riverside: hand-built humanoid with procedural animation (idle, walk, run, jump, fall, swim, drive).
+// Costa del Gzowo: hand-built humanoid with procedural animation (idle, walk, run, jump, fall, swim, drive).
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { hookMaterial } from '../render/shaderHooks.js';
@@ -104,6 +104,9 @@ export async function createCharacter(ctx) {
   const current = { ...pose };
   let phase = 0;
   let idle = 0;
+  let scripted = null;
+  let scriptedRate = 10;
+  const reachTargets = { L: null, R: null };
 
   function target(s, dt) {
     const p = pose;
@@ -218,8 +221,21 @@ export async function createCharacter(ctx) {
   return {
     group: root,
     height: 1.8,
+    joints: { hips, spine, neck, head, arms, legs },
+    dimensions: DIM,
+    setScripted(override, rate = 10) {
+      scripted = override;
+      scriptedRate = rate;
+    },
+    reach(side, point) {
+      reachTargets[side] = point || null;
+    },
     update(dt, s) {
-      const rate = target(s, dt);
+      let rate = target(s, dt);
+      if (scripted) {
+        Object.assign(pose, scripted);
+        rate = scriptedRate;
+      }
       const k = 1 - Math.exp(-rate * dt);
       for (const key in pose) current[key] += (pose[key] - current[key]) * k;
       apply();

@@ -1,4 +1,4 @@
-# Riverside: downloads the CC0 freesound.org recordings listed below, trims them, detects footstep onsets and writes credits.
+# Costa del Gzowo: downloads the CC0 freesound.org recordings listed below, trims them, detects footstep onsets and writes credits.
 import json
 import os
 import re

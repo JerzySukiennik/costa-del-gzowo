@@ -1,4 +1,4 @@
-// Riverside: gameplay orchestration (on-foot and driving modes, entering and leaving the car, effects, water interaction hooks).
+// Costa del Gzowo: gameplay orchestration (on-foot and driving modes, entering and leaving the car, effects, water interaction hooks).
 import * as THREE from 'three';
 import { SPAWN, WORLD } from './config.js';
 import { GROUPS, groups } from './core/physics.js';
@@ -50,6 +50,7 @@ export async function createGame(ctx) {
   let stepTimer = 0;
   let exitHint = 0;
   let lastHitSeen = 0;
+  let wasOccupied = false;
   const pushA = new THREE.Vector4();
   const pushB = new THREE.Vector4();
   const bodyShadow = new THREE.Vector4();
@@ -243,9 +244,17 @@ export async function createGame(ctx) {
         if (audio) audio.roof();
       }
       if (input.hit('KeyH')) game.beams = !game.beams;
+      if (ctx.radio && input.hit('KeyQ')) ctx.radio.step(-1);
+      if (ctx.radio && input.hit('KeyE')) ctx.radio.step(1);
       if (input.hit('KeyC')) rig.rig.zoom = rig.rig.zoom > 1.3 ? 0.78 : rig.rig.zoom < 0.9 ? 1 : 1.45;
     }
     updateTransition(dt);
+    if (ctx.radio && car.state.occupied !== wasOccupied) {
+      wasOccupied = car.state.occupied;
+      if (wasOccupied && !car.state.stalled) ctx.radio.enter();
+      else ctx.radio.exit();
+    }
+    if (ctx.radio && car.state.stalled) ctx.radio.kill();
 
     acc = Math.min(acc + dt, STEP * 8);
     let first = true;
@@ -288,12 +297,12 @@ export async function createGame(ctx) {
     exitHint = Math.max(0, exitHint - dt);
     if (nearDoor) hud.prompt('F', 'Enter car');
     else if (inCar && car.state.stalled) hud.prompt('R', 'Engine flooded, reset car');
-    else if (inCar && exitHint > 0 && car.state.speed < 1) hud.prompt('F', 'Exit   ·   T roof   ·   H lights');
+    else if (inCar && exitHint > 0 && car.state.speed < 1) hud.prompt('F', 'Exit   ·   Q E radio   ·   T roof   ·   H lights');
     else hud.prompt('', '');
     hud.drive(game.mode === 'car', car.state);
     hud.note(damage.state.note);
 
-    rig.update(dt, input, player, car, game.water);
+    if (!game.cinematic) rig.update(dt, input, player, car, game.water);
     v.copy(player.state.position);
     const onFoot = game.mode === 'foot' && !game.transition;
     pushA.set(v.x, onFoot ? v.y : -100, v.z, 0.75);

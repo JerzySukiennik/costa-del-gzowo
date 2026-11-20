@@ -1,5 +1,5 @@
 #!/bin/sh
-# Riverside: packs raw glTF models into meshopt + WebP GLBs under assets/models.
+# Costa del Gzowo: packs raw glTF models into meshopt + WebP GLBs under assets/models.
 cd "$(dirname "$0")"
 OUT=../../assets/models
 TMP=../raw/tmp

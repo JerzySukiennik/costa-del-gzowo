@@ -1,4 +1,4 @@
-// Riverside: reduces a photoscanned tree glTF (thins leaf cards by component, simplifies wood) and writes a plain glTF.
+// Costa del Gzowo: reduces a photoscanned tree glTF (thins leaf cards by component, simplifies wood) and writes a plain glTF.
 // node lod_tree.mjs <in.gltf> <outDir> <name> leaves=0.1 wood=0.1 [scale=1]
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';

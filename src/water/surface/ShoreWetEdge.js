@@ -1,4 +1,4 @@
-// Riverside water: screen-space wet-bank decal that darkens terrain just above the waterline, with lapping and drying gradient.
+// Costa del Gzowo water: screen-space wet-bank decal that darkens terrain just above the waterline, with lapping and drying gradient.
 import * as THREE from 'three';
 import { GLSL_CONSTANTS, GLSL_HASH, GLSL_BAKE, GLSL_SCENE } from '../glsl/common.js';
 

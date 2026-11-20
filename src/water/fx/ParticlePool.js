@@ -1,4 +1,4 @@
-// Riverside water: CPU-simulated particle pool (droplets, spray sheets, mist, bubbles) rendered as soft, lit, depth-aware instanced sprites.
+// Costa del Gzowo water: CPU-simulated particle pool (droplets, spray sheets, mist, bubbles) rendered as soft, lit, depth-aware instanced sprites.
 import * as THREE from 'three';
 import { GLSL_CONSTANTS, GLSL_HASH, GLSL_SCENE, GLSL_OPTICS, GLSL_SHADOW } from '../glsl/common.js';
 

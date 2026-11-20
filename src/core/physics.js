@@ -1,4 +1,4 @@
-// Riverside: Rapier world wrapper with fixed stepping, surface tags and static collider helpers.
+// Costa del Gzowo: Rapier world wrapper with fixed stepping, surface tags and static collider helpers.
 import RAPIER from 'rapier';
 
 export const GROUPS = {

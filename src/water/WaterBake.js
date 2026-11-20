@@ -1,4 +1,4 @@
-// Riverside water: CPU bake of river depth, current (with obstacle deflection), wakes and shore distance into GPU textures.
+// Costa del Gzowo water: CPU bake of river depth, current (with obstacle deflection), wakes and shore distance into GPU textures.
 import * as THREE from 'three';
 
 const toHalf = THREE.DataUtils.toHalfFloat;

@@ -1,4 +1,4 @@
-// Riverside: minimal HUD (speed cluster, context prompt, damage note, place title).
+// Costa del Gzowo: minimal HUD (speed cluster, context prompt, damage note, place title).
 export function createHud() {
   const el = (id) => document.getElementById(id);
   const hud = el('hud');
@@ -9,6 +9,7 @@ export function createHud() {
   const rpm = el('rpm-bar');
   const note = el('damage-note');
   const place = el('place');
+
   let lastPrompt = '';
   let lastSpeed = -1;
   return {

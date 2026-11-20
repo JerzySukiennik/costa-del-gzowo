@@ -1,4 +1,4 @@
-// Riverside water harness: boots the stand-in world, the water system and the replica pipeline, and exposes window.__test helpers.
+// Costa del Gzowo water harness: boots the stand-in world, the water system and the replica pipeline, and exposes window.__test helpers.
 import * as THREE from 'three';
 import { WaterSystem } from '../WaterSystem.js';
 import { BRIDGE } from '../../config.js';

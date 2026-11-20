@@ -1,4 +1,4 @@
-// Riverside water harness: minimal fly camera (drag to look, WASD/QE to move, Shift for speed).
+// Costa del Gzowo water harness: minimal fly camera (drag to look, WASD/QE to move, Shift for speed).
 import * as THREE from 'three';
 
 export class FlyCamera {

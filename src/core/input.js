@@ -1,4 +1,4 @@
-// Riverside: keyboard and pointer-lock mouse input with edge detection.
+// Costa del Gzowo: keyboard and pointer-lock mouse input with edge detection.
 export function createInput(canvas) {
   const down = new Set();
   const pressed = new Set();

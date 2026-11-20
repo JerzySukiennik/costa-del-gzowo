@@ -1,4 +1,4 @@
-// Riverside: terrain chunks, baked splat maps, layered PBR ground shader and the physics heightfield.
+// Costa del Gzowo: terrain chunks, baked splat maps, layered PBR ground shader and the physics heightfield.
 import * as THREE from 'three';
 import { BRIDGE, ROAD, WORLD } from '../config.js';
 import { heightAt, trackInfo, fbm, smooth, clamp } from './heightfield.js';

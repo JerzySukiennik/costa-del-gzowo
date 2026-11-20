@@ -1,4 +1,4 @@
-// Riverside: distant city skyline in the haze (instanced towers with procedural curtain walls), radio mast and far causeway.
+// Costa del Gzowo: distant city skyline in the haze (instanced towers with procedural curtain walls), radio mast and far causeway.
 import * as THREE from 'three';
 import { hookMaterial } from '../render/shaderHooks.js';
 import { rng } from './scatter.js';
