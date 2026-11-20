@@ -17,7 +17,7 @@ const IDLE = 850;
 const REDLINE = 6900;
 const WHEEL_INERTIA = 1.7;
 
-const SURFACES = {
+export const SURFACES = {
   asphalt: { mu: 1.06, peak: 1, roll: 0.013, bump: 0, loose: 0 },
   concrete: { mu: 1.0, peak: 1, roll: 0.014, bump: 0, loose: 0 },
   metal: { mu: 0.6, peak: 1, roll: 0.014, bump: 0, loose: 0 },
@@ -31,7 +31,7 @@ const SURFACES = {
   gravel: { mu: 0.66, peak: 1.5, roll: 0.035, bump: 0.012, loose: 0.9 },
   dirt: { mu: 0.62, peak: 1.5, roll: 0.045, bump: 0.02, loose: 0.8 },
 };
-const GROUND_NAMES = { [GROUND.GRASS]: 'grass', [GROUND.FOREST]: 'forest', [GROUND.MUD]: 'mud', [GROUND.PEBBLES]: 'pebbles', [GROUND.SAND]: 'sand', [GROUND.GRAVEL]: 'gravel', [GROUND.DIRT]: 'dirt', [GROUND.ROCK]: 'rock' };
+export const GROUND_NAMES = { [GROUND.GRASS]: 'grass', [GROUND.FOREST]: 'forest', [GROUND.MUD]: 'mud', [GROUND.PEBBLES]: 'pebbles', [GROUND.SAND]: 'sand', [GROUND.GRAVEL]: 'gravel', [GROUND.DIRT]: 'dirt', [GROUND.ROCK]: 'rock' };
 
 const TORQUE = [[800, 300], [1800, 500], [5000, 500], [6400, 410], [7200, 290]];
 function torqueAt(rpm) {

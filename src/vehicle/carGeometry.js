@@ -74,7 +74,6 @@ export function tube(points, radius, radial = 10, closed = false, scaleFn = null
   const g = new THREE.TubeGeometry(curve, segs, radius, radial, closed);
   if (scaleFn) {
     const pos = g.attributes.position;
-    const frames = curve.computeFrenetFrames(segs, closed);
     const c = new THREE.Vector3();
     for (let i = 0; i <= segs; i++) {
       curve.getPointAt(i / segs, c);

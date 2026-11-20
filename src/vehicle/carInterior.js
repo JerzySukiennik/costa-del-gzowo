@@ -9,7 +9,6 @@ export const WHEEL_CENTER = new THREE.Vector3(-0.03, 0.8, -0.37);
 export const WHEEL_RADIUS = 0.185;
 const TAN = [0.66, 0.38, 0.2];
 const DARK = [0.045, 0.04, 0.036];
-const LEATHER = [0, 0, 0, 0.6, 0, 0];
 const RECLINE = 0.38;
 
 function dashProfile() {
