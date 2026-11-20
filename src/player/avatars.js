@@ -2,7 +2,7 @@
 import { createJurekSkin } from './jurek.js';
 
 export const AVATARS = [
-  { id: 'default', name: 'Default', note: 'Everyday summer clothes', figure: 'plain' },
+  { id: 'default', name: 'Dario', note: 'Fitted tee, denim shorts, white sneakers', figure: 'plain' },
   { id: 'jurek', name: 'Jurek', note: 'Hood up, sweatpants, green Crocs', figure: 'hood' },
 ];
 

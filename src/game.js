@@ -20,7 +20,7 @@ export async function createGame(ctx) {
   const particles = createParticles(scene);
   const skidmarks = createSkidmarks(scene);
   const hud = createHud();
-  const character = await createCharacter(ctx);
+  const character = await createCharacter(ctx, { id: 'default' });
   scene.add(character.group);
   const avatars = createAvatars(ctx, character);
   if (ctx.avatar && ctx.avatar !== 'default') await avatars.set(ctx.avatar).catch((error) => console.warn('Avatar unavailable, using the default one.', error));
