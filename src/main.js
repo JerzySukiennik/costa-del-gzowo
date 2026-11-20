@@ -21,6 +21,7 @@ import { createRadio } from './audio/radio.js';
 import { createCinematics } from './camera/cinematics.js';
 import { createScreens } from './ui/screens.js';
 import { AVATARS } from './player/avatars.js';
+import { VEHICLES } from './vehicle/vehicles.js';
 
 const canvas = document.getElementById('view');
 const params = new URLSearchParams(location.search);
@@ -53,6 +54,8 @@ async function boot() {
   let musicVolume = stored('costa-music', 0.6);
   let avatar = params.get('avatar') || localStorage.getItem('costa-avatar') || 'default';
   if (!AVATARS.some((a) => a.id === avatar)) avatar = 'default';
+  let car = params.get('car') || localStorage.getItem('costa-car') || VEHICLES[0].id;
+  if (!VEHICLES.some((v) => v.id === car)) car = VEHICLES[0].id;
   const hooks = {};
   const screens = createScreens({
     title: GAME.title,
@@ -63,6 +66,14 @@ async function boot() {
     avatars: AVATARS,
     avatar,
     onAvatar: (id) => hooks.avatar && hooks.avatar(id),
+    vehicles: VEHICLES,
+    vehicle: car,
+    onVehicle: (id) => {
+      localStorage.setItem('costa-car', id);
+      const url = new URL(location.href);
+      url.searchParams.delete('car');
+      location.replace(url);
+    },
     onGesture: () => hooks.gesture && hooks.gesture(),
     onStart: () => hooks.start && hooks.start(),
     onResume: () => hooks.resume && hooks.resume(),
@@ -105,7 +116,7 @@ async function boot() {
   await nextFrame();
   status('Building the bridge');
   const bridge = await createBridge({ assets, lighting, physics, scene, noise: terrain.noise });
-  const ctx = { renderer, scene, camera, assets, lighting, physics, terrain, input, quality, avatar, time: { value: 0 }, cull: [] };
+  const ctx = { renderer, scene, camera, assets, lighting, physics, terrain, input, quality, avatar, car, time: { value: 0 }, cull: [] };
   status('Growing trees');
   const trees = await createTrees(ctx);
   await nextFrame();

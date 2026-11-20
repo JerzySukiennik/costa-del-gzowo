@@ -50,6 +50,9 @@ export async function createGame(ctx) {
   let exitHint = 0;
   let lastHitSeen = 0;
   let wasOccupied = false;
+  let lastKick = car.state.kick;
+  let boostKick = 0;
+  let lastLanding = 0;
   const pushA = new THREE.Vector4();
   const pushB = new THREE.Vector4();
   const bodyShadow = new THREE.Vector4();
@@ -234,6 +237,19 @@ export async function createGame(ctx) {
     hud.note(damage.state.note);
 
     if (!game.cinematic) rig.update(dt, input, player, car, game.water);
+    if (car.state.kick !== undefined && game.mode === 'car') {
+      if (car.state.kick !== lastKick) {
+        lastKick = car.state.kick;
+        boostKick = 1;
+      }
+      boostKick *= Math.exp(-2.5 * dt);
+      if ((car.state.landing || 0) > lastLanding + 0.05) rig.shake(Math.min(0.7, car.state.landing));
+      lastLanding = car.state.landing || 0;
+      if (!game.cinematic && boostKick > 0.01) {
+        camera.fov += 6 * boostKick;
+        camera.updateProjectionMatrix();
+      }
+    }
     v.copy(player.state.position);
     const onFoot = game.mode === 'foot' && !game.transition;
     pushA.set(v.x, onFoot ? v.y : -100, v.z, 0.75);
@@ -248,7 +264,7 @@ export async function createGame(ctx) {
   player.sync(0.016, { steer: 0, throttle: 0 });
 
   return {
-    game, update, hud, car, carModel, damage, player, character, avatars, rig, particles,
+    game, update, hud, car, carModel, damage, vehicle, entry, player, character, avatars, rig, particles,
     setWater(water) {
       game.water = water;
       car.setWater(water);

@@ -11,6 +11,8 @@ const CAR = [['Throttle and brake', ['W', 'S']], ['Steer', ['A', 'D']], ['Handbr
 const COMMON = [['Pause', ['Esc']], ['Map and menu', ['M']]];
 const AVATARS = [{ id: 'default', name: 'Default', note: 'Everyday summer clothes', figure: 'plain' }];
 const AVATARS_SOON = ['Driver', 'Swimmer'];
+const VEHICLES = [{ id: 'convertible', name: 'Convertible', specs: { power: '400 hp', drive: 'AWD', mass: '1650 kg' } }];
+const SPEC_ROWS = [['power', 'Power'], ['drive', 'Drive'], ['mass', 'Weight'], ['top', 'Top speed'], ['zeroTo100', '0 to 100 km/h']];
 const FIGURES = {
   plain: '<svg viewBox="0 0 100 150"><circle cx="50" cy="32" r="17"/><path d="M14 150V96Q14 62 50 62Q86 62 86 96V150Z"/></svg>',
   hood: '<svg viewBox="0 0 100 150"><path fill-rule="evenodd" d="M50 6Q79 6 80 42Q80 58 66 68H34Q20 58 20 42Q21 6 50 6ZM50 21Q35 21 35 41Q35 56 50 58Q65 56 65 41Q65 21 50 21Z"/><circle cx="50" cy="40" r="10.5"/><path d="M14 150V98Q14 64 50 64Q86 64 86 98V150Z"/></svg>',
@@ -257,20 +259,23 @@ export function createScreens(options = {}) {
       figure('plain'), el('div', { class: 'sc-avatar-name', text: name }), el('div', { class: 'sc-avatar-note', text: 'Coming soon' })));
     return el('div', { class: 'sc-tab-panel', 'data-tab-panel': 'avatar' }, el('div', { class: 'sc-avatars' }, cards, soon));
   }
-  function spec(label, value, level) {
-    return el('div', { class: 'sc-spec' },
-      el('div', { class: 'sc-spec-head' }, el('span', { text: label }), el('span', { class: 'sc-spec-val', text: value })),
-      el('div', { class: 'sc-spec-track' }, el('i', { style: { '--v': String(level) } })));
-  }
+  const vehicleList = Array.isArray(cfg.vehicles) && cfg.vehicles.length ? cfg.vehicles : VEHICLES;
+  const vehicleId = vehicleList.some((v) => v.id === cfg.vehicle) ? cfg.vehicle : vehicleList[0].id;
 
   function buildGarageTab() {
+    const cards = vehicleList.map((v) => {
+      const on = v.id === vehicleId;
+      const rows = SPEC_ROWS.filter(([key]) => v.specs && v.specs[key]).map(([key, label]) => el('div', { class: 'sc-spec-head' }, el('span', { text: label }), el('span', { class: 'sc-spec-val', text: v.specs[key] })));
+      return el('button', {
+        type: 'button', class: `sc-car${on ? ' on' : ''}`, 'data-nav': '', 'aria-pressed': String(on), 'aria-label': on ? `${v.name}, your car` : `Switch to ${v.name}`,
+        onclick: () => {
+          if (!on) cb('onVehicle', v.id);
+        },
+      }, el('div', { class: 'sc-car-head' }, el('div', { class: 'sc-car-name', text: v.name }), el('div', { class: `sc-car-tag${on ? ' on' : ''}`, text: on ? 'Your car' : 'Switch' })), el('div', { class: 'sc-specs' }, rows));
+    });
     return el('div', { class: 'sc-tab-panel', 'data-tab-panel': 'garage' },
-      el('div', { class: 'sc-car' },
-        el('div', { class: 'sc-car-head' }, el('div', { class: 'sc-car-name', text: 'Convertible' }), el('div', { class: 'sc-car-tag', text: 'Your car' })),
-        el('div', { class: 'sc-specs' }, spec('Power', '400 hp', 0.67), spec('Drive', 'AWD', 1), spec('Weight', '1650 kg', 0.66))),
-      el('div', { class: 'sc-slots' },
-        el('div', { class: 'sc-slot', text: 'Coming soon' }),
-        el('div', { class: 'sc-slot', text: 'Coming soon' })));
+      el('div', { class: 'sc-cars' }, cards),
+      vehicleList.length > 1 ? el('div', { class: 'sc-car-note', text: 'Switching cars restarts the drive.' }) : null);
   }
 
   function buildSettingsTab() {

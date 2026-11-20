@@ -413,12 +413,17 @@
 .sc-avatar-note { margin-top: 4px; font-size: 13px; color: var(--sc-dim); }
 .sc-avatar-tag { margin-top: 10px; font-size: 12px; letter-spacing: 0.04em; font-weight: 600; color: var(--sc-amber); }
 
-.sc-car { width: min(640px, 100%); padding: 32px; border-radius: 14px; background: var(--sc-surface); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.sc-cars { display: flex; flex-wrap: wrap; gap: 18px; }
+.sc-car { width: min(460px, 100%); padding: 30px; border: 0; border-radius: 14px; background: var(--sc-surface); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.sc-car.on { box-shadow: 0 0 0 2px var(--sc-amber); cursor: default; }
+.sc-car:focus-visible { box-shadow: 0 0 0 2px var(--sc-amber); }
+.sc-car-tag.on { color: var(--sc-amber); }
+.sc-car-note { margin-top: 16px; font-size: 13px; color: var(--sc-dim); }
 .sc-car-head { display: flex; align-items: baseline; justify-content: space-between; }
-.sc-car-name { font-size: 30px; font-weight: 650; }
+.sc-car-name { font-size: 26px; font-weight: 650; }
 .sc-car-tag { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--sc-dim); }
-.sc-specs { margin-top: 26px; display: flex; flex-direction: column; gap: 20px; }
-.sc-spec-head { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px; }
+.sc-specs { margin-top: 24px; display: flex; flex-direction: column; gap: 12px; }
+.sc-spec-head { display: flex; justify-content: space-between; gap: 18px; font-size: 15px; }
 .sc-spec-head span:first-child { color: var(--sc-dim); }
 .sc-spec-val { font-weight: 600; font-variant-numeric: tabular-nums; }
 .sc-spec-track { height: 3px; background: rgba(255, 255, 255, 0.14); }
