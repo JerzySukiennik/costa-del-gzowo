@@ -9,6 +9,7 @@ const QUALITY = [['ultra', 'Ultra'], ['high', 'High'], ['medium', 'Medium']];
 const FOOT = [['Move', ['W', 'A', 'S', 'D']], ['Camera', ['Mouse']], ['Sprint', ['Shift']], ['Jump', ['Space']], ['Enter car', ['F']]];
 const CAR = [['Throttle and brake', ['W', 'S']], ['Steer', ['A', 'D']], ['Handbrake', ['Space']], ['Exit car', ['F']], ['Radio', ['Q', 'E']], ['Roof', ['T']], ['Lights', ['H']], ['Camera', ['C']], ['Reset car', ['R']]];
 const COMMON = [['Pause', ['Esc']], ['Map and menu', ['M']]];
+const ROADSTER = [['Fly up', ['Space']], ['Hold altitude', ['release']], ['Descend and land', ['C']], ['Fly forward and brake', ['W', 'S']], ['Turn', ['A', 'D']], ['Boost', ['Shift']], ['Pitch and roll', ['I', 'K', 'J', 'L']], ['Flight assist', ['G']], ['Handbrake', ['X']], ['Camera', ['V']]];
 const AVATARS = [{ id: 'default', name: 'Default', note: 'Everyday summer clothes', figure: 'plain' }];
 const AVATARS_SOON = ['Driver', 'Swimmer'];
 const VEHICLES = [{ id: 'convertible', name: 'Convertible', specs: { power: '400 hp', drive: 'AWD', mass: '1650 kg' } }];
@@ -138,7 +139,7 @@ export function createScreens(options = {}) {
 
   function buildControls(single = false) {
     return el('div', { class: 'sc-controls' },
-      el('div', { class: `sc-keys-grid${single ? ' one' : ''}` }, keyCol('On foot', FOOT), keyCol('In the car', CAR)),
+      el('div', { class: `sc-keys-grid${single ? ' one' : ''}` }, keyCol('On foot', FOOT), keyCol('In the car', CAR), keyCol('Roadster', ROADSTER)),
       el('div', { class: 'sc-keys-common' }, keyCol('Anywhere', COMMON)));
   }
 

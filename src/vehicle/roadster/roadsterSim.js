@@ -510,7 +510,7 @@ export class RoadsterSim {
 
   thrust(dt, inp) {
     const th = this.thrusters;
-    this.flight.update(dt, inp, { q: this.q, vel: this.vel, speed: this.speed, fwdSpeed: this.fwdSpeed, angLocal: this.angLocal, mass: this.mass, inertia: this.inertia, com: this.comLocal, contacts: this.contacts, clearance: this.clearance });
+    this.flight.update(dt, inp, { q: this.q, vel: this.vel, speed: this.speed, fwdSpeed: this.fwdSpeed, angLocal: this.angLocal, mass: this.mass, inertia: this.inertia, com: this.comLocal, contacts: this.contacts, clearance: this.clearance, altitude: this.pos.y });
     const ge = this.tu.thrusters.ground_effect;
     const o = this._a;
     const d = this._b;

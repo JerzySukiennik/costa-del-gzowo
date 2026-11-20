@@ -276,7 +276,7 @@
 .sc-range::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--sc-ink); }
 
 .sc-controls { display: flex; flex-direction: column; gap: 22px; }
-.sc-keys-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+.sc-keys-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 26px; }
 .sc-keys-grid.one { grid-template-columns: 1fr; }
 .sc-keycol-title { margin-bottom: 8px; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--sc-dim); }
 .sc-key-row {

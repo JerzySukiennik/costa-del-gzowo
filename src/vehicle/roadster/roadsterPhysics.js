@@ -8,7 +8,14 @@ import { RoadsterSim } from './roadsterSim.js';
 import { TUNING } from './tuning.js';
 
 const TO_GAME = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
-export const ROADSTER_KEYS = { boost: ['ShiftLeft', 'ShiftRight'], lift: ['KeyX'], pitchDown: ['KeyI'], pitchUp: ['KeyK'], rollLeft: ['KeyJ'], rollRight: ['KeyL'], assist: ['KeyG'] };
+const EDGE = WORLD.half - 50;
+const edgePush = (p, v) => {
+  const over = Math.abs(p) - EDGE;
+  if (over <= 0) return 0;
+  const out = Math.sign(p);
+  return -out * Math.min(70, 1.2 * over + 1.6 * Math.max(0, v * out));
+};
+export const ROADSTER_KEYS = { boost: ['ShiftLeft', 'ShiftRight'], lift: ['Space'], descend: ['KeyC'], handbrake: 'KeyX', camera: 'KeyV', pitchDown: ['KeyI'], pitchUp: ['KeyK'], rollLeft: ['KeyJ'], rollRight: ['KeyL'], assist: ['KeyG'] };
 
 export function createRoadsterPhysics({ physics, terrain, model, spawn, input }) {
   const R = physics.RAPIER;
@@ -45,7 +52,7 @@ export function createRoadsterPhysics({ physics, terrain, model, spawn, input })
   const up = new THREE.Vector3();
   const right = new THREE.Vector3();
   const prevVel = new THREE.Vector3();
-  const inp = { throttle: 0, brake: 0, steer: 0, boost: false, lift: false, pitch: 0, roll: 0, park: true };
+  const inp = { throttle: 0, brake: 0, steer: 0, boost: false, lift: false, descend: false, pitch: 0, roll: 0, park: true };
   const wheels = sim.wheels.map(() => ({ contact: false, surface: 'asphalt', surf: SURFACES.asphalt, skid: 0, point: new THREE.Vector3(), normal: new THREE.Vector3(0, 1, 0), wet: 0, load: 0, slip: 0 }));
   let wasBoost = false;
   let airT = 0;
@@ -72,6 +79,7 @@ export function createRoadsterPhysics({ physics, terrain, model, spawn, input })
     inp.park = !on || controls.handbrake;
     inp.boost = key(ROADSTER_KEYS.boost);
     inp.lift = key(ROADSTER_KEYS.lift);
+    inp.descend = on ? key(ROADSTER_KEYS.descend) : true;
     inp.pitch = (key(ROADSTER_KEYS.pitchDown) ? 1 : 0) - (key(ROADSTER_KEYS.pitchUp) ? 1 : 0);
     inp.roll = (key(ROADSTER_KEYS.rollRight) ? 1 : 0) - (key(ROADSTER_KEYS.rollLeft) ? 1 : 0);
   }
@@ -79,6 +87,14 @@ export function createRoadsterPhysics({ physics, terrain, model, spawn, input })
   function substep(dt) {
     time += dt;
     readInput();
+    if (sim.contacts === 0) {
+      const at = body.translation();
+      const lv = body.linvel();
+      const ax = edgePush(at.x, lv.x);
+      const az = edgePush(at.z, lv.z);
+      if (ax || az) body.applyImpulse({ x: ax * sim.mass * dt, y: 0, z: az * sim.mass * dt }, true);
+      if (at.y < WORLD.waterLevel - 60) sim.teleport([spawn.x, y0 + 0.4, spawn.z], spawn.yaw + Math.PI / 2);
+    }
     sim.powerScale = (state.powerScale ?? 1) * (sim.waterDepth > 0.9 ? 0.2 : 1);
     sim.step(dt, inp);
     read();
@@ -138,7 +154,7 @@ export function createRoadsterPhysics({ physics, terrain, model, spawn, input })
   read();
   sync();
   return {
-    body, sim, wheels, state, controls, colliders: sim.colliders, mass: sim.mass,
+    body, sim, wheels, state, controls, colliders: sim.colliders, mass: sim.mass, keys: ROADSTER_KEYS,
     position: pos, quaternion: quat, velocity: vel, forward: fwd, up, right,
     setWater(w) {
       water = w;

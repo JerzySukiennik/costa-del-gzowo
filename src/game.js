@@ -50,6 +50,7 @@ export async function createGame(ctx) {
   let exitHint = 0;
   let lastHitSeen = 0;
   let wasOccupied = false;
+  const carKeys = { handbrake: 'Space', camera: 'KeyC', ...(car.keys || {}) };
   let lastKick = car.state.kick;
   let boostKick = 0;
   let lastLanding = 0;
@@ -159,14 +160,14 @@ export async function createGame(ctx) {
     car.controls.throttle = inCar && fw > 0 ? 1 : 0;
     car.controls.brake = inCar && fw < 0 ? 1 : 0;
     car.controls.steer = inCar ? -strafe : 0;
-    car.controls.handbrake = inCar && input.key('Space');
+    car.controls.handbrake = inCar && input.key(carKeys.handbrake);
 
     doorWorld.copy(entry.doorLocal);
     carModel.group.localToWorld(doorWorld);
     const nearDoor = game.mode === 'foot' && !game.transition && doorWorld.distanceTo(player.center(v)) < 2.3;
     if (input.hit('KeyF') && !game.transition) {
       if (nearDoor) beginEnter();
-      else if (inCar && car.state.speed < 4.5) beginExit();
+      else if (inCar && car.state.speed < 4.5 && !(car.keys && car.state.airborne)) beginExit();
     }
     if (inCar) {
       if (input.hit('KeyR')) {
@@ -180,7 +181,7 @@ export async function createGame(ctx) {
       if (input.hit('KeyH')) game.beams = !game.beams;
       if (ctx.radio && input.hit('KeyQ')) ctx.radio.step(-1);
       if (ctx.radio && input.hit('KeyE')) ctx.radio.step(1);
-      if (input.hit('KeyC')) rig.rig.zoom = rig.rig.zoom > 1.3 ? 0.78 : rig.rig.zoom < 0.9 ? 1 : 1.45;
+      if (input.hit(carKeys.camera)) rig.rig.zoom = rig.rig.zoom > 1.3 ? 0.78 : rig.rig.zoom < 0.9 ? 1 : 1.45;
     }
     updateTransition(dt);
     if (ctx.radio && car.state.occupied !== wasOccupied) {
@@ -231,7 +232,7 @@ export async function createGame(ctx) {
     exitHint = Math.max(0, exitHint - dt);
     if (nearDoor) hud.prompt('F', 'Enter car');
     else if (inCar && car.state.stalled) hud.prompt('R', 'Engine flooded, reset car');
-    else if (inCar && exitHint > 0 && car.state.speed < 1) hud.prompt('F', 'Exit   ·   Q E radio   ·   T roof   ·   H lights');
+    else if (inCar && exitHint > 0 && car.state.speed < 1) hud.prompt('F', car.keys ? 'Exit   ·   Space up   ·   C down   ·   Shift boost   ·   Q E radio' : 'Exit   ·   Q E radio   ·   T roof   ·   H lights');
     else hud.prompt('', '');
     hud.drive(game.mode === 'car', car.state);
     hud.note(damage.state.note);

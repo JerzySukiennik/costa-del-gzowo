@@ -1,4 +1,4 @@
-// Costa del Gzowo Roadster: flight computer (ground boost and retro, jet hop, in-air rate control with assist, levelling and soft-landing glide), ported from Roadster Jump.
+// Costa del Gzowo Roadster: flight computer (ground boost and retro, jet take-off, climb while lift is held, altitude hold when released, controlled descent, in-air cruise and braking, rate control with assist and levelling), based on Roadster Jump.
 import { V3, Quat, clamp, DEG, MPH } from './math.js';
 import { Allocator } from './allocator.js';
 
@@ -11,6 +11,7 @@ export class FlightComputer {
     this.assist = true;
     this.hopT = 0; this.hopReady = 0; this.groundedT = 0; this.airT = 0; this.prevLift = false;
     this.leveling = 0; this.timeToImpact = 99;
+    this.flying = false; this.holdAlt = null;
     this.wantF = new V3(); this.wantT = new V3();
     this._q = new Quat(); this._q2 = new Quat(); this._e = new V3(); this._v = new V3(); this._fw = new V3(); this._fwd = new V3(); this._lf = new V3();
   }
@@ -44,7 +45,9 @@ export class FlightComputer {
     this.prevLift = inp.lift;
 
     if (this.mode === 'ground') {
-      if (liftEdge && grounded) { this.mode = 'hop'; this.hopT = 0; this.hopReady = 0; }
+      this.flying = false;
+      this.holdAlt = null;
+      if (liftEdge && grounded) { this.mode = 'hop'; this.hopT = 0; this.hopReady = 0; this.flying = true; }
       else if (!grounded && this.airT > 0.12) this.mode = 'air';
     } else if (this.mode === 'hop') {
       this.hopT += dt;
@@ -76,7 +79,7 @@ export class FlightComputer {
       const boost = inp.boost && !inp.brake, retro = inp.boost && inp.brake;
       this.alloc.clear();
       if (retro) th.requestFront();
-      for (const n of th.rear) { n.cmdPitch = 0; n.cmdSide = 0; n.cmdValve = boost ? gov : 0; }
+      for (const n of th.rear) { n.cmdPitch = 0; n.cmdSide = 0; n.cmdValve = boost ? gov * F.ground_boost : 0; }
       for (const n of th.front) { n.cmdPitch = 0; n.cmdSide = 0; n.cmdValve = retro && s.fwdSpeed > 0.5 ? 1 : 0; }
       for (const n of th.side) { n.cmdPitch = 0; n.cmdSide = 0; n.cmdValve = 0; }
       return;
@@ -84,7 +87,7 @@ export class FlightComputer {
 
     else if (this.mode === 'hop') {
       const upHop = this._v.set(0, 1, 0).applyQuat(q).y;
-      fw.set(0, 1, 0).applyQuat(q).scale((rearMax + frontMax + 0.6 * sideMax) * clamp((upHop - 0.35) / 0.5, 0, 1));
+      fw.set(0, 1, 0).applyQuat(q).scale(Math.min(rearMax + frontMax + 0.6 * sideMax, m * (g + F.hop_accel)) * clamp((upHop - 0.35) / 0.5, 0, 1));
       if (inp.boost) fw.addScaled(fh, rearMax * gov);
       if (grounded) {
         this.wantT.x = -I.pitch * F.rate_gain * w.x * 0.6;
@@ -97,19 +100,32 @@ export class FlightComputer {
       if (inp.boost) fw.addScaled(fh, rearMax * gov);
       this.rates(inp, w, I);
       const upY = this._v.set(0, 1, 0).applyQuat(q).y;
+      if (inp.lift || inp.descend) this.flying = true;
+      const hover = this.assist && this.flying;
       const near = this.timeToImpact < F.level_time_s || (s.clearance < 3.5 && v.y < 1);
-      if (this.assist && (near || inp.lift) && Math.abs(inp.pitch) < 0.05 && Math.abs(inp.roll) < 0.05) this.level(q, fwdW, v, w, I, inp);
-      if (inp.lift) {
-        if (this.assist) {
+      if (this.assist && (near || hover) && Math.abs(inp.pitch) < 0.05 && Math.abs(inp.roll) < 0.05) this.level(q, fwdW, v, w, I, inp);
+      if (hover) {
+        let az;
+        if (inp.lift) {
+          az = F.climb_gain * (F.climb_rate * clamp((F.ceiling_m - s.altitude) / 80, 0, 1) - v.y);
+          this.holdAlt = null;
+        } else if (inp.descend) {
           const L = F.land_rate;
-          const vzCmd = -Math.min(L[2], L[0] + L[1] * s.clearance);
-          const az = clamp(3.4 * (vzCmd - v.y), -g * 0.95, 30);
-          fw.y += m * (g + az) / Math.max(0.35, upY);
-          if (upY < 0.2) fw.y = 0;
-          const lat = this._v.set(v.x, 0, v.z);
-          if (s.clearance < 6 && lat.len() > 0.5) fw.addScaled(lat, -m * 0.25);
-        } else fw.copy(this._v.set(0, 1, 0).applyQuat(q)).scale(sideMax + rearMax + frontMax);
-      }
+          az = 3.4 * (-Math.min(L[2], L[0] + L[1] * s.clearance) - v.y);
+          this.holdAlt = null;
+        } else {
+          if (this.holdAlt === null && Math.abs(v.y) < 2) this.holdAlt = s.altitude + v.y * 0.3;
+          az = this.holdAlt === null ? -F.hold_kd * v.y : F.hold_kp * (this.holdAlt - s.altitude) - F.hold_kd * v.y;
+        }
+        fw.y += m * (g + clamp(az, -g * 0.95, F.climb_accel)) / Math.max(0.35, upY);
+        if (upY < 0.2) fw.y = 0;
+        const nose = Math.hypot(fwdW.x, fwdW.z) > 1e-3 ? this._lf.set(fwdW.x, 0, fwdW.z).normalize() : fh;
+        if (inp.throttle > 0.05) fw.addScaled(nose, m * F.cruise_accel * inp.throttle);
+        if (inp.brake > 0.05) {
+          if (hv > 1) fw.addScaled(this._v.set(v.x / hv, 0, v.z / hv), -m * F.air_brake * inp.brake);
+          else fw.addScaled(nose, -m * F.cruise_accel * 0.5 * inp.brake);
+        } else if (!inp.boost && inp.throttle <= 0.05 && hv > 0.2) fw.addScaled(this._v.set(v.x, 0, v.z), -m * F.hover_drag);
+      } else if (inp.lift) fw.copy(this._v.set(0, 1, 0).applyQuat(q)).scale(sideMax + rearMax + frontMax);
     }
 
     const any = fw.lenSq() > 1 || Math.abs(this.wantT.x) + Math.abs(this.wantT.y) + Math.abs(this.wantT.z) > 1;
