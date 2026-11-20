@@ -5,8 +5,14 @@ export const GAME = {
 };
 
 export const MUSIC = {
-  title: { url: 'assets/music/love-is-a-long-road.mp3', title: 'Love Is a Long Road', artist: 'Tom Petty and the Heartbreakers' },
-  menu: { url: 'assets/music/hot-together.mp3', title: 'Hot Together', artist: 'The Pointer Sisters' },
+  title: {
+    url: 'assets/music/love-is-a-long-road.mp3', youtube: 'xAgUYyosqVM', title: 'Love Is a Long Road', artist: 'Tom Petty and the Heartbreakers',
+    own: { url: 'assets/music-public/gzowo-labs-moon-mission.mp3', title: 'Moon Mission', artist: 'Gzowo Labs' },
+  },
+  menu: {
+    url: 'assets/music/hot-together.mp3', youtube: 'H3Aay-47ZT0', title: 'Hot Together', artist: 'The Pointer Sisters',
+    own: { url: 'assets/music-public/gzowo-labs-untitledtypebeat.mp3', title: 'untitledtypebeat', artist: 'Gzowo Labs' },
+  },
 };
 
 export const RADIO = [

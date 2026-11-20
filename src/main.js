@@ -18,6 +18,8 @@ import { heightAt, flowAt } from './world/heightfield.js';
 import { createGame } from './game.js';
 import { createAudio } from './audio/audio.js';
 import { createRadio } from './audio/radio.js';
+import { createDeck } from './audio/deck.js';
+import { createSoundtrack } from './audio/soundtrack.js';
 import { createCinematics } from './camera/cinematics.js';
 import { createScreens } from './ui/screens.js';
 import { AVATARS } from './player/avatars.js';
@@ -57,6 +59,9 @@ async function boot() {
   let car = params.get('car') || localStorage.getItem('costa-car') || VEHICLES[0].id;
   if (!VEHICLES.some((v) => v.id === car)) car = VEHICLES[0].id;
   const hooks = {};
+  const streamed = params.get('soundtrack') === 'youtube';
+  const localMusic = !streamed && (await fetch(MUSIC.title.url, { method: 'HEAD' }).then((r) => r.ok, () => false));
+  const deck = localMusic ? null : createDeck();
   const screens = createScreens({
     title: GAME.title,
     cssHref: 'src/ui/screens.css',
@@ -146,7 +151,8 @@ async function boot() {
   if (water.setSunShadow) water.setSunShadow(sun.texture, sun.matrix);
   pipeline.water = water;
   play.setWater(water);
-  ctx.radio = await createRadio({ audio: ctx.audio });
+  ctx.radio = await createRadio({ audio: ctx.audio, deck, folders: localMusic ? ['assets/music/', 'assets/music-public/'] : ['assets/music-public/'] });
+  const soundtrack = createSoundtrack({ audio: ctx.audio, deck, local: localMusic, onTrack: (track) => screens.setTrack(track) });
   const cinematics = createCinematics({ camera, pipeline, lighting });
   play.game.cinematic = true;
   play.character.group.visible = false;
@@ -196,28 +202,21 @@ async function boot() {
     if (on && document.exitPointerLock) document.exitPointerLock();
     ctx.audio.setPaused(on);
     ctx.radio.pause(on);
-    const music = ctx.audio.music;
-    if (on && music.url !== MUSIC.menu.url) {
-      music.level = 0;
-      music.play(MUSIC.menu.url, { loop: true });
-    }
-    music.fade(on ? 0.5 : 0, on ? 0.8 : 1);
+    if (on) soundtrack.play('menu', 0.5, 0.8);
+    else soundtrack.fade(0, 1);
     clock.getDelta();
   }
 
   hooks.gesture = () => {
     ctx.audio.start();
-    ctx.audio.music.onError = () => screens.setTrack(null);
-    ctx.audio.music.play(MUSIC.title.url, { loop: true });
-    ctx.audio.music.fade(1, 1.5);
-    screens.setTrack({ title: MUSIC.title.title, artist: MUSIC.title.artist });
+    soundtrack.play('title', 1, 1.5);
   };
   hooks.start = () => {
     if (mode !== 'title') return;
     mode = 'starting';
     fade = { t: 0, switched: false };
     ctx.audio.start();
-    ctx.audio.music.fade(0, 4);
+    soundtrack.fade(0, 4);
   };
   hooks.resume = () => {
     setPaused(false);
@@ -298,6 +297,7 @@ async function boot() {
     const dt = Math.min(raw, 0.05);
     fps += (1 / Math.max(raw, 0.001) - fps) * 0.05;
     ctx.audio.tickMusic(Math.min(raw, 0.1));
+    if (deck) deck.tick(Math.min(raw, 0.1), musicVolume);
     renderer.info.reset();
     if (!paused) {
       elapsed += dt;
@@ -329,7 +329,7 @@ async function boot() {
   }
 
   window.__dbg = {
-    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, skyline, water, play, input, ctx, screens, cinematics,
+    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, skyline, water, play, input, ctx, screens, cinematics, deck, soundtrack,
     get fps() {
       return Math.round(fps);
     },
