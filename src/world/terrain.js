@@ -96,7 +96,11 @@ function bakeSplat(heights) {
       w[GROUND.GRAVEL] += hard * 1.2;
       w[GROUND.DIRT] += track * 1.2;
       let town = 0;
+      let wild = -1;
       if (x > TOWN.x0 - 40) {
+        let s0 = 0;
+        for (let k = 0; k < 8; k++) s0 += w[k];
+        wild = s0 > 0.0001 ? (w[GROUND.GRASS] + w[GROUND.FOREST] * 0.35) / s0 : 0;
         town = 1 - smooth(-3, 1.5, townSigned(x, z) + (n2 - 0.5) * 3);
         const yard = town > 0 && inYard(x, z) ? 1 - smooth(0.3, 0.7, n2 * 0.6 + n1 * 0.5) * 0.4 : 0;
         const bare = town * (1 - yard);
@@ -107,6 +111,7 @@ function bakeSplat(heights) {
         w[GROUND.GRASS] += bare * (0.35 + 0.7 * smooth(0.35, 0.65, n2));
         w[GROUND.GRASS] += town * yard * 1.4;
         w[GROUND.DIRT] += town * yard * 0.25 * smooth(0.5, 0.8, n2);
+        wild = wild * (1 - town) + town * yard;
         town = bare;
       }
       let sum = 0;
@@ -120,8 +125,8 @@ function bakeSplat(heights) {
         a[o + k] = Math.round((w[k] / sum) * 255);
         b[o + k] = Math.round((w[k + 4] / sum) * 255);
       }
-      const grassy = (w[GROUND.GRASS] + w[GROUND.FOREST] * 0.35) / sum;
-      veg[o] = Math.round(clamp(grassy * (0.55 + 0.9 * n2) * (1 - town), 0, 1) * 255);
+      const grassy = wild >= 0 ? wild : (w[GROUND.GRASS] + w[GROUND.FOREST] * 0.35) / sum;
+      veg[o] = Math.round(clamp(grassy * (0.55 + 0.9 * n2) * (wild >= 0 ? 1 : 1 - town), 0, 1) * 255);
       veg[o + 1] = Math.round(clamp(smooth(-0.32, -0.05, h) * (1 - smooth(0.25, 0.7, h)) * smooth(0.46, 0.62, n1) * (1 - hard) * (1 - track) * (1 - town) * 1.4, 0, 1) * 255);
       veg[o + 2] = Math.round(forest * bank * keep * 255);
       veg[o + 3] = Math.round(clamp(h * 12 + 128, 0, 255));

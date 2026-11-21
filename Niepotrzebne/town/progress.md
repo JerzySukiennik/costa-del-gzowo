@@ -14,6 +14,11 @@ Branch: worktree-agent-a838f81042801976f. Dev server for tests: `python3 Niepotr
 - Map (screens.js) draws the bigger island and the town; HUD shows the place name on entering/leaving.
 - Tests (stepped physics, `tools/drive.json`, `tools/walkfly.json`): highway-to-town drive at 110 km/h with no bump at the seam; car stopped by kerb/palm/buildings; parked car pushed; cross street to barrier; roof raycasts match building heights; walking up kerbs, into shop fronts, plaza to alley.
 
+## Measurements so far (1280x720 high, averaged calls)
+- Baseline (port 8932 serves `git archive ec903a0` from the scratchpad, assets symlinked): spawn 10.0 ms / 1002 calls / 17.2 M tris, townStreet spot 3.5 ms / 243 / 5.1 M, eastEnd 4.8 ms / 420 / 6.5 M.
+- New: spawn 998 calls / 17.7 M, townStreet 5.5 ms / 385 / 6.2 M, townEntry 446 / 7.2 M, eastEnd 6.2 ms / 456 / 7.5 M. Spawn ms swings 10-14 with throttling; calls equal to baseline.
+- Throttling ruins repeated runs; `views.mjs` now also reads GPU timer queries (`gpu`), which throttling of the CPU does not skew.
+
 ## Next
 - Final perf measurement in a cool state (same views as `shots/base-*`), Roadster flight edge check, last visual pass.
 
