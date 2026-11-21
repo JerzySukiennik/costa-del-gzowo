@@ -54,6 +54,10 @@ Opening the game puts you in a shared world with up to three other players (a fu
 - The Firebase Realtime Database is used only to find each other, to exchange connection offers and to record who simulates which vehicle. Its rules for the `costa` branch are in `Niepotrzebne/net/costa.rules.json`.
 - `?solo=1` turns multiplayer off. `Niepotrzebne/tools/mp-test.mjs` runs two real clients against each other.
 
+## Look editor
+
+Press O in the game (or Menu, Settings, Look editor) to open a live panel while the game keeps running. It has twelve ready-made looks (Costa, Original, Blockbuster, Vice, Kodak 35, Postcard, Sunset, Dream, Noir, Documentary, VHS 2003, Arcade) and sliders for colour (exposure, contrast, saturation, warmth, split toning, faded blacks), lens (bloom, glare, halation, anamorphic streaks, sun flare, depth of field, vignette, colour fringes, distortion, sharpness), film (grain, cinema bars, scanlines, flicker, motion blur) and camera feel (field of view, speed rush, shake, lean into corners, distance, handheld sway). The choice is saved in the browser. "Hold to compare" shows the original look, "Copy settings" puts the current values on the clipboard. The looks live in `src/render/look.js`.
+
 ## Music
 
 Two sources, picked automatically:

@@ -18,6 +18,8 @@ import { createFallbackWater } from './world/fallbackWater.js';
 import { heightAt, flowAt } from './world/heightfield.js';
 import { createGame } from './game.js';
 import { createNameTags } from './ui/nametags.js';
+import { createLook } from './render/look.js';
+import { createLookEditor } from './ui/lookEditor.js';
 import { createAudio } from './audio/audio.js';
 import { createRadio } from './audio/radio.js';
 import { createSoundtrack } from './audio/soundtrack.js';
@@ -77,6 +79,7 @@ async function boot() {
     onAvatar: (id) => hooks.avatar && hooks.avatar(id),
     name,
     onName: (value) => hooks.name && hooks.name(value),
+    onLook: () => hooks.look && hooks.look(),
     vehicles: VEHICLES,
     vehicle: car,
     onVehicle: (id) => hooks.vehicle && hooks.vehicle(id),
@@ -153,6 +156,30 @@ async function boot() {
   status('Preparing the car');
   ctx.onAvatar = (id) => hooks.avatar && hooks.avatar(id, true);
   const play = await createGame(ctx);
+  const look = createLook();
+  const useLook = (values) => {
+    pipeline.look = values;
+    play.rig.setLook(values);
+  };
+  useLook(look.values);
+  let lookOpen = false;
+  const lookEditor = createLookEditor(look, {
+    onClose: () => showLook(false),
+    onCompare: (on) => useLook(on ? look.preview('original') : look.values),
+  });
+  function showLook(on) {
+    lookOpen = on;
+    lookEditor.show(on);
+    if (on && document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
+    if (!on && !params.has('auto') && canvas.requestPointerLock) {
+      const result = canvas.requestPointerLock();
+      if (result && result.catch) result.catch(() => {});
+    }
+  }
+  hooks.look = () => {
+    if (hooks.resume) hooks.resume();
+    setTimeout(() => showLook(true), 400);
+  };
   status('Filling the river');
   const water = await startWater(ctx, [...WATER_OBSTACLES, ...plants.obstacles]);
   if (water.setSunShadow) water.setSunShadow(sun.texture, sun.matrix);
@@ -299,6 +326,8 @@ async function boot() {
     if (e.code === 'Escape') {
       setPaused(true);
       screens.showPause();
+    } else if (e.code === 'KeyO') {
+      showLook(!lookOpen);
     } else if (e.code === 'KeyM' || e.code === 'Tab') {
       e.preventDefault();
       setPaused(true);
@@ -307,7 +336,12 @@ async function boot() {
     }
   });
   document.addEventListener('pointerlockchange', () => {
-    if (mode === 'playing' && !document.pointerLockElement && !paused && !params.has('auto')) {
+    if (lookOpen && document.pointerLockElement) {
+      lookOpen = false;
+      lookEditor.show(false);
+      return;
+    }
+    if (mode === 'playing' && !document.pointerLockElement && !paused && !lookOpen && !params.has('auto')) {
       setPaused(true);
       screens.showPause();
     }
@@ -354,6 +388,11 @@ async function boot() {
       ctx.town.update(dt, elapsed, camera);
       for (const c of ctx.cull) c.object.visible = (c.x - camera.position.x) ** 2 + (c.z - camera.position.z) ** 2 < c.range * c.range;
       lighting.update();
+      if (look.values.dof > 0) {
+        const subject = play.game.cinematic ? null : play.game.mode === 'foot' ? play.player.state.position : play.car.position;
+        const want = subject ? Math.max(2, camera.position.distanceTo(subject)) : 14;
+        pipeline.focus += (want - pipeline.focus) * Math.min(1, dt * 5);
+      }
       pipeline.render(dt, elapsed);
     }
     frames++;
@@ -379,6 +418,8 @@ async function boot() {
     get net() {
       return ctx.net || null;
     },
+    looks: look,
+    showLook,
     get mode() {
       return mode;
     },

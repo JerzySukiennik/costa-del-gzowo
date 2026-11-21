@@ -311,6 +311,26 @@ uniform float uVibrance;
 uniform vec3 uShadowTint;
 uniform vec3 uHighlightTint;
 uniform float uOlive;
+uniform float uDistort;
+uniform float uHalation;
+uniform float uStreak;
+uniform float uMatte;
+uniform float uLetterbox;
+uniform float uScan;
+uniform float uFlicker;
+uniform float uGrainSize;
+uniform float uFlare;
+uniform float uDof;
+uniform float uFocus;
+uniform vec2 uNearFar;
+float depthAt(vec2 uv) {
+  float d = texture(tSunDepth, uv).r;
+  return uNearFar.x * uNearFar.y / (uNearFar.y - d * (uNearFar.y - uNearFar.x));
+}
+float cocAt(float z) {
+  float c = (z - uFocus) / max(z, 0.1);
+  return clamp(abs(c) * (c < 0.0 ? 0.55 : 1.0) * uDof * 26.0, 0.0, 15.0);
+}
 vec3 agxContrast(vec3 x) {
   vec3 x2 = x * x;
   vec3 x4 = x2 * x2;
@@ -355,17 +375,44 @@ vec3 flare(vec2 uv) {
 }
 void main() {
   vec2 q = vUv - 0.5;
+  vec2 uv = 0.5 + q * (1.0 + uDistort * dot(q, q)) / (1.0 + max(uDistort, 0.0) * 0.5);
   vec2 ca = q * dot(q, q) * uAberration;
-  vec3 c = vec3(texture(tColor, vUv - ca).r, texture(tColor, vUv).g, texture(tColor, vUv + ca).b);
-  vec3 n = texture(tColor, vUv + vec2(uTexel.x, 0.0)).rgb + texture(tColor, vUv - vec2(uTexel.x, 0.0)).rgb + texture(tColor, vUv + vec2(0.0, uTexel.y)).rgb + texture(tColor, vUv - vec2(0.0, uTexel.y)).rgb;
-  float lc = luma(texture(tColor, vUv).rgb);
+  vec3 c = vec3(texture(tColor, uv - ca).r, texture(tColor, uv).g, texture(tColor, uv + ca).b);
+  if (uDof > 0.001) {
+    float z = depthAt(uv);
+    float coc = cocAt(z) / (uTexel.y * 1080.0);
+    if (coc > 0.6) {
+      vec3 sum = c;
+      float wsum = 1.0;
+      for (int i = 0; i < 16; i++) {
+        float f = (float(i) + 0.5) / 16.0;
+        float a = float(i) * 2.39996;
+        float r = sqrt(f) * coc;
+        vec2 o = vec2(cos(a), sin(a)) * r * uTexel;
+        float zs = depthAt(uv + o);
+        float w = zs >= z - 0.6 ? 1.0 : clamp(cocAt(zs) / (uTexel.y * 1080.0) / max(r, 0.5), 0.0, 1.0);
+        sum += min(texture(tColor, uv + o).rgb, vec3(24.0)) * w;
+        wsum += w;
+      }
+      c = mix(c, sum / wsum, smoothstep(0.6, 2.2, coc));
+    }
+  }
+  vec3 n = texture(tColor, uv + vec2(uTexel.x, 0.0)).rgb + texture(tColor, uv - vec2(uTexel.x, 0.0)).rgb + texture(tColor, uv + vec2(0.0, uTexel.y)).rgb + texture(tColor, uv - vec2(0.0, uTexel.y)).rgb;
+  float lc = luma(texture(tColor, uv).rgb);
   float ln = luma(n) * 0.25;
   c *= 1.0 + uSharpen * clamp((lc - ln) / max(max(lc, ln), 0.001), -0.5, 0.5);
-  vec3 bloom = texture(tBloom, vUv).rgb / 6.0;
+  vec3 bloom = texture(tBloom, uv).rgb / 6.0;
   c = mix(c, bloom, uBloom);
   c += max(bloom - 0.9, vec3(0.0)) * uGlare * vec3(1.0, 0.8, 0.55);
-  c += flare(vUv) * max(luma(bloom), 0.6);
+  c += max(bloom - 0.5, vec3(0.0)) * uHalation * vec3(0.55, 0.11, 0.04);
+  if (uStreak > 0.001) {
+    vec3 line = vec3(0.0);
+    for (int i = -7; i <= 7; i++) line += texture(tBloom, uv + vec2(float(i) * 0.02, 0.0)).rgb * (1.0 - abs(float(i)) / 8.0);
+    c += max(line / 48.0 - 0.4, vec3(0.0)) * uStreak * vec3(0.28, 0.52, 1.0);
+  }
+  c += flare(vUv) * max(luma(bloom), 0.6) * uFlare;
   c *= 1.0 - uVignette * pow(dot(q, q) * 2.0, 1.35);
+  c *= 1.0 + uFlicker * 0.05 * (fract(sin(floor(uTime * 24.0) * 12.9898) * 43758.5453) - 0.5);
   c *= uExposure * texture(tAdapt, vec2(0.5)).r * uTint;
   c = agx(c);
   c = pow(max(c, vec3(0.0)), vec3(uContrast));
@@ -379,11 +426,15 @@ void main() {
   c = agxOut(c);
   c = clamp(c, 0.0, 1.0);
   float lum = luma(c);
-  c = lum + (c - lum) * (1.0 + 0.22 * smoothstep(0.42, 0.9, lum));
+  c = lum + (c - lum) * (1.0 + 0.22 * smoothstep(0.42, 0.9, lum) * min(uSaturation, 1.0));
   c += uShadowTint * (1.0 - smoothstep(0.0, 0.42, lum)) + uHighlightTint * smoothstep(0.5, 1.0, lum);
-  float grain = fract(sin(dot(gl_FragCoord.xy + fract(uTime) * 61.7, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+  c += uMatte * (1.0 - c) * (1.0 - c) * vec3(0.92, 0.96, 1.06);
+  c *= 1.0 - uScan * 0.2 * (0.5 + 0.5 * sin(gl_FragCoord.y * 3.14159));
+  vec2 cell = floor(gl_FragCoord.xy / uGrainSize);
+  float grain = fract(sin(dot(cell + fract(uTime) * 61.7, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
   c += grain * uGrain * (1.0 - 0.6 * lum);
   c += (ign(gl_FragCoord.xy) - 0.5) / 255.0;
+  if (uLetterbox > 0.0) c *= step(abs(q.y), 0.5 * min(1.0, (uTexel.y / uTexel.x) / uLetterbox));
   outColor = vec4(clamp(c, 0.0, 1.0) * uFade, 1.0);
 }`;
 
@@ -440,7 +491,11 @@ export class Pipeline {
       uVignette: { value: 0.2 }, uGrain: { value: 0.018 }, uSaturation: { value: 1.3 }, uContrast: { value: 1.23 }, uTint: { value: new THREE.Color(1.035, 1.0, 0.955) }, uFade: { value: 1 },
       tAdapt: tex(), tSunDepth: tex(), uSun: { value: new THREE.Vector3() }, uAberration: { value: 0.0035 }, uGlare: { value: 0.08 }, uVibrance: { value: 0.3 }, uOlive: { value: 0.3 },
       uShadowTint: { value: new THREE.Vector3(-0.02, 0.008, 0.036) }, uHighlightTint: { value: new THREE.Vector3(0.036, 0.014, -0.032) },
+      uDistort: { value: 0 }, uHalation: { value: 0 }, uStreak: { value: 0 }, uMatte: { value: 0 }, uLetterbox: { value: 0 }, uScan: { value: 0 }, uFlicker: { value: 0 }, uGrainSize: { value: 1 }, uFlare: { value: 1 },
+      uDof: { value: 0 }, uFocus: { value: 8 }, uNearFar: { value: new THREE.Vector2(0.1, 2000) },
     });
+    this.look = null;
+    this.focus = 8;
     this.motionMat = mat(MOTION_FRAG, { tColor: tex(), tDepth: tex(), uInvViewProj: m4(), uPrevViewProj: m4(), uStrength: { value: 0.5 } });
     this.adaptMat = mat(ADAPT_FRAG, { tSmall: tex(), tPrev: tex(), uRate: { value: 0.05 }, uReset: { value: 1 } });
     this.sunWorld = new THREE.Vector3(0, 1, 0);
@@ -604,7 +659,7 @@ export class Pipeline {
       u.tDepth.value = t.scene.depthTexture;
       u.uInvViewProj.value.copy(this.jitteredInvViewProj);
       u.uPrevViewProj.value.copy(this.prevViewProj);
-      u.uStrength.value = Math.min(0.8, 0.28 * (0.0167 / Math.max(dt, 0.004)));
+      u.uStrength.value = Math.min(1.2, 0.28 * (0.0167 / Math.max(dt, 0.004)) * (this.look ? this.look.motionBlur : 1));
       this.draw(this.motionMat, t.work);
       output = t.work;
     }
@@ -639,8 +694,35 @@ export class Pipeline {
     fu.tBloom.value = t.down[0].texture;
     fu.tAdapt.value = adaptCur.texture;
     fu.tSunDepth.value = t.scene.depthTexture;
-    fu.uBloom.value = this.settings.bloom ? 0.065 : 0;
-    fu.uExposure.value = this.exposure;
+    const look = this.look;
+    fu.uBloom.value = this.settings.bloom ? (look ? look.bloom : 0.065) : 0;
+    fu.uExposure.value = look ? look.exposure : this.exposure;
+    if (look) {
+      fu.uContrast.value = look.contrast;
+      fu.uSaturation.value = look.saturation;
+      fu.uVibrance.value = look.vibrance;
+      fu.uTint.value.setRGB(1.035 * (1 + 0.12 * look.temperature), 1 + 0.08 * look.tint, 0.955 * (1 - 0.12 * look.temperature));
+      fu.uShadowTint.value.fromArray(look.shadowTint).multiplyScalar(look.split);
+      fu.uHighlightTint.value.fromArray(look.highlightTint).multiplyScalar(look.split);
+      fu.uOlive.value = look.olive;
+      fu.uMatte.value = look.matte;
+      fu.uGlare.value = look.glare;
+      fu.uHalation.value = look.halation;
+      fu.uStreak.value = this.settings.bloom ? look.streak : 0;
+      fu.uVignette.value = look.vignette;
+      fu.uAberration.value = look.aberration;
+      fu.uDistort.value = look.distortion;
+      fu.uSharpen.value = look.sharpen;
+      fu.uFlare.value = look.flare;
+      fu.uDof.value = look.dof;
+      fu.uFocus.value = this.focus;
+      fu.uNearFar.value.set(camera.near, camera.far);
+      fu.uGrain.value = look.grain;
+      fu.uGrainSize.value = look.grainSize;
+      fu.uLetterbox.value = look.letterbox;
+      fu.uScan.value = look.scanlines;
+      fu.uFlicker.value = look.flicker;
+    }
     fu.uTime.value = this.time;
     fu.uFade.value = this.fade;
     this.sunClip.set(camera.position.x + this.sunWorld.x * 1000, camera.position.y + this.sunWorld.y * 1000, camera.position.z + this.sunWorld.z * 1000, 1).applyMatrix4(this.viewProj);

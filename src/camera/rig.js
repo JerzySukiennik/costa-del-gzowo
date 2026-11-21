@@ -6,7 +6,8 @@ import { heightAt } from '../world/heightfield.js';
 
 export function createCameraRig({ camera, physics }) {
   const R = physics.RAPIER;
-  const rig = { yaw: 2.2, pitch: 0.2, distance: 3.6, mode: 'foot', trauma: 0, blend: 1, carYaw: 0, orbit: 0, orbitIdle: 9, fov: 55, far: 0, zoom: 1 };
+  const rig = { yaw: 2.2, pitch: 0.2, distance: 3.6, mode: 'foot', trauma: 0, blend: 1, carYaw: 0, orbit: 0, orbitIdle: 9, fov: 55, far: 0, zoom: 1, turn: 0, roll: 0 };
+  let feel = { fov: 55, speedFov: 1, shake: 1, roll: 0, distance: 1, handheld: 0 };
   const pivot = new THREE.Vector3();
   const pivotSmooth = new THREE.Vector3();
   const desired = new THREE.Vector3();
@@ -71,13 +72,14 @@ export function createCameraRig({ camera, physics }) {
       pivotSmooth.z += (pivot.z - pivotSmooth.z) * kh;
       pivotSmooth.y += (pivot.y - pivotSmooth.y) * kv;
       const pitch = rig.pitch + rig.far * 0.28;
-      const dist = rig.distance * (1 + rig.far * 0.5) * (player.state.speed > 4.5 ? 1.08 : 1);
+      const dist = rig.distance * feel.distance * (1 + rig.far * 0.5) * (player.state.speed > 4.5 ? 1.08 : 1);
+      rig.turn = 0;
       desired.set(pivotSmooth.x - sy * Math.cos(pitch) * dist, pivotSmooth.y + Math.sin(pitch) * dist, pivotSmooth.z - cy * Math.cos(pitch) * dist);
       const free = avoid(pivotSmooth, desired, GROUPS.WORLD | GROUPS.CAR);
       currentDist += (Math.min(free, dist) - currentDist) * Math.min(1, dt * (free < currentDist ? 30 : 4));
       desired.sub(pivotSmooth).normalize().multiplyScalar(currentDist).add(pivotSmooth);
       look.copy(pivotSmooth);
-      fov = 55 + rig.far * 6;
+      fov = feel.fov + rig.far * 6;
     } else {
       const s = car.state;
       const f = car.forward;
@@ -90,6 +92,7 @@ export function createCameraRig({ camera, physics }) {
       let diff = targetYaw - rig.carYaw;
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));
       rig.carYaw += diff * Math.min(1, dt * (3.2 + speed * 0.05));
+      rig.turn = diff * Math.min(speed, 45);
       if (Math.abs(mouse.dx) + Math.abs(mouse.dy) > 0) {
         rig.orbit -= mouse.dx * 0.0026;
         rig.pitch = THREE.MathUtils.clamp(rig.pitch + mouse.dy * 0.002, -0.05, 0.9);
@@ -101,7 +104,7 @@ export function createCameraRig({ camera, physics }) {
       }
       const yaw = rig.carYaw + rig.orbit;
       const pitch = Math.max(rig.pitch, 0.06);
-      const dist = ((view ? view.distance : 6.1) + Math.min(view ? 4 : 1.6, speed * (view ? 0.07 : 0.035))) * rig.zoom;
+      const dist = ((view ? view.distance : 6.1) + Math.min(view ? 4 : 1.6, speed * (view ? 0.07 : 0.035))) * rig.zoom * feel.distance;
       if (view) pivot.copy(car.position).setY(car.position.y + view.height);
       else pivot.copy(car.position).addScaledVector(car.up, 1.15);
       if (!initialized) pivotSmooth.copy(pivot);
@@ -113,7 +116,7 @@ export function createCameraRig({ camera, physics }) {
       desired.sub(pivotSmooth).normalize().multiplyScalar(currentDist).add(pivotSmooth);
       look.copy(pivotSmooth).addScaledVector(f, view ? view.ahead : 1.6);
       look.y += 0.15;
-      fov = 55 + Math.min(1, speed / 55) * 15;
+      fov = feel.fov + Math.min(1, speed / 55) * 15 * feel.speedFov;
       rig.trauma = Math.max(rig.trauma, Math.min(0.25, (s.skid || 0) * 0.08 + (s.onGround > 0 && car.wheels.some((w) => w.surf.loose > 0.4) ? Math.min(0.1, speed * 0.004) : 0)));
     }
     const ground = heightAt(desired.x, desired.z);
@@ -127,9 +130,16 @@ export function createCameraRig({ camera, physics }) {
     helper.position.copy(desired);
     helper.lookAt(lookSmooth);
     helper.rotateY(Math.PI);
+    rig.roll += (THREE.MathUtils.clamp(rig.turn * 0.012, -0.2, 0.2) * feel.roll - rig.roll) * Math.min(1, dt * 3.5);
+    if (feel.handheld > 0) {
+      helper.rotateX((Math.sin(time * 1.7) + Math.sin(time * 0.83 + 2.0) * 0.8) * 0.004 * feel.handheld);
+      helper.rotateY((Math.sin(time * 1.3 + 0.7) + Math.sin(time * 0.61 + 4.1) * 0.9) * 0.005 * feel.handheld);
+      helper.rotateZ(Math.sin(time * 0.9 + 1.9) * 0.004 * feel.handheld);
+    }
+    if (Math.abs(rig.roll) > 0.0005) helper.rotateZ(rig.roll);
     toQuat.copy(helper.quaternion);
     rig.trauma = Math.max(0, rig.trauma - dt * 1.4);
-    const shake = rig.trauma * rig.trauma;
+    const shake = rig.trauma * rig.trauma * feel.shake;
     if (shake > 0.0001) {
       helper.rotateX(Math.sin(time * 61) * 0.035 * shake);
       helper.rotateY(Math.sin(time * 47 + 1.3) * 0.035 * shake);
@@ -158,6 +168,9 @@ export function createCameraRig({ camera, physics }) {
     rig,
     update,
     setMode,
+    setLook(values) {
+      feel = values;
+    },
     shake(amount) {
       rig.trauma = Math.min(1, rig.trauma + amount);
     },

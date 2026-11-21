@@ -9,7 +9,7 @@ const TABS = [['map', 'Map'], ['avatar', 'Avatar'], ['garage', 'Garage'], ['sett
 const QUALITY = [['ultra', 'Ultra'], ['high', 'High'], ['medium', 'Medium']];
 const FOOT = [['Move', ['W', 'A', 'S', 'D']], ['Camera', ['Mouse']], ['Sprint', ['Shift']], ['Jump', ['Space']], ['Enter car', ['F']]];
 const CAR = [['Throttle and brake', ['W', 'S']], ['Steer', ['A', 'D']], ['Handbrake', ['Space']], ['Exit car', ['F']], ['Radio', ['Q', 'E']], ['Roof', ['T']], ['Lights', ['H']], ['Camera', ['C']], ['Reset car', ['R']]];
-const COMMON = [['Pause', ['Esc']], ['Map and menu', ['M']]];
+const COMMON = [['Pause', ['Esc']], ['Map and menu', ['M']], ['Look editor', ['O']]];
 const ROADSTER = [['Fly up', ['Space']], ['Hold altitude', ['release']], ['Descend and land', ['C']], ['Fly forward and brake', ['W', 'S']], ['Turn', ['A', 'D']], ['Boost', ['Shift']], ['Pitch and roll', ['I', 'K', 'J', 'L']], ['Flight assist', ['G']], ['Handbrake', ['X']], ['Camera', ['V']]];
 const HELI = [['Climb', ['Space']], ['Hold altitude', ['release']], ['Descend and land', ['C']], ['Fly forward, brake and back up', ['W', 'S']], ['Turn', ['A', 'D']], ['Fly fast', ['Shift']], ['Landing light', ['H']], ['Camera', ['V']]];
 const AVATARS = [{ id: 'default', name: 'Default', note: 'Everyday summer clothes', figure: 'plain' }];
@@ -305,7 +305,9 @@ export function createScreens(options = {}) {
   function buildSettingsTab() {
     return el('div', { class: 'sc-tab-panel sc-tab-settings', 'data-tab-panel': 'settings' },
       el('div', { class: 'sc-tab-grid' },
-        el('div', { class: 'sc-card' }, el('div', { class: 'sc-card-title', text: 'Settings' }), buildSettings(), el('div', { class: 'sc-card-title sc-card-sub', text: 'Players here' }), buildName(), playersBox),
+        el('div', { class: 'sc-card' }, el('div', { class: 'sc-card-title', text: 'Settings' }), buildSettings(),
+          el('button', { type: 'button', class: 'sc-look', 'data-nav': '', onclick: () => cb('onLook') }, 'Look editor: colours, lens and camera'),
+          el('div', { class: 'sc-card-title sc-card-sub', text: 'Players here' }), buildName(), playersBox),
         el('div', { class: 'sc-card' }, el('div', { class: 'sc-card-title', text: 'Controls' }), buildControls())));
   }
 
