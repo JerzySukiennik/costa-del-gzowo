@@ -6,7 +6,7 @@ import { heightAt } from '../world/heightfield.js';
 const INK = '#f6f1e7';
 const AMBER = '#f2a23a';
 const TABS = [['map', 'Map'], ['avatar', 'Avatar'], ['garage', 'Garage'], ['settings', 'Settings']];
-const QUALITY = [['cinematic', 'Cinematic'], ['ultra', 'Ultra'], ['high', 'High'], ['medium', 'Medium']];
+const QUALITY = [['extreme', 'Extreme'], ['cinematic', 'Cinematic'], ['ultra', 'Ultra'], ['high', 'High'], ['medium', 'Medium'], ['low', 'Low']];
 const FOOT = [['Move', ['W', 'A', 'S', 'D']], ['Camera', ['Mouse']], ['Sprint', ['Shift']], ['Jump', ['Space']], ['Enter car', ['F']]];
 const CAR = [['Throttle and brake', ['W', 'S']], ['Steer', ['A', 'D']], ['Handbrake', ['Space']], ['Exit car', ['F']], ['Radio', ['Q', 'E']], ['Roof', ['T']], ['Lights', ['H']], ['Camera', ['C']], ['Reset car', ['R']]];
 const COMMON = [['Pause', ['Esc']], ['Map and menu', ['M']], ['Look editor', ['O']], ['Quality and speed panel', ['P']]];
@@ -119,7 +119,7 @@ export function createScreens(options = {}) {
     }));
     return el('div', { class: 'sc-field' },
       el('div', { class: 'sc-row' }, el('span', { text: 'Quality' })),
-      el('div', { class: 'sc-seg', role: 'radiogroup', 'aria-label': 'Quality' }, buttons));
+      el('div', { class: 'sc-seg sc-seg-grid', role: 'radiogroup', 'aria-label': 'Quality' }, buttons));
   }
 
   function buildSettings() {

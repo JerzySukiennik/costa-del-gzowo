@@ -292,6 +292,69 @@ async function shadowSplit() {
   return [...sums.entries()].map(([key, e]) => [key, Math.round(e[0] / 6), +(e[1] / 6).toFixed(1)]).sort((a, b) => b[1] - a[1]).slice(0, 26);
 }
 
+async function driveTest({ frames, start }) {
+  const { d, frame, pause } = window.__bench;
+  const { heightAt } = await import(new URL('src/world/heightfield.js', location.href).href);
+  d.play.game.cinematic = false;
+  d.play.seat();
+  const car = d.play.car;
+  car.body.setTranslation({ x: start[0], y: heightAt(start[0], start[1]) + 0.9, z: start[1] }, true);
+  car.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+  car.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+  const spots = [
+    ['logic', d.play, 'update'], ['trees', d.trees, 'update'], ['grassCull', d.ctx.grass, 'cull'], ['lod', d.lod, 'update'], ['lodEnd', d.lod, 'end'], ['modelCull', d.modelCull, 'update'],
+    ['waterUpdate', d.water, 'update'], ['reflection', d.water, 'renderReflection'], ['shadows', d.renderer.shadowMap, 'render'], ['renders', d.renderer, 'render'], ['pipeline', d.pipeline, 'render'],
+  ];
+  const now = {};
+  const undo = [];
+  for (const [label, object, key] of spots) {
+    if (!object || typeof object[key] !== 'function') continue;
+    const original = object[key];
+    now[label] = 0;
+    object[key] = function (...a) {
+      const t = performance.now();
+      const r = original.apply(this, a);
+      now[label] += performance.now() - t;
+      return r;
+    };
+    undo.push(() => (object[key] = original));
+  }
+  for (let i = 0; i < 20; i++) {
+    frame();
+    await pause();
+  }
+  d.input.hold('KeyW', true);
+  const rows = [];
+  const info = d.renderer.info;
+  let programs = info.programs.length;
+  let geometries = info.memory.geometries;
+  let textures = info.memory.textures;
+  for (let i = 0; i < frames; i++) {
+    if (i % 150 === 60) d.input.hold('KeyA', true);
+    if (i % 150 === 85) d.input.hold('KeyA', false);
+    if (i % 150 === 130) d.input.hold('KeyD', true);
+    if (i % 150 === 149) d.input.hold('KeyD', false);
+    for (const key of Object.keys(now)) now[key] = 0;
+    const [total, cpu] = frame();
+    rows.push({ i, total, cpu, parts: { ...now }, programs: info.programs.length - programs, geometries: info.memory.geometries - geometries, textures: info.memory.textures - textures, speed: car.state.speed, x: car.position.x, z: car.position.z, calls: info.render.calls });
+    programs = info.programs.length;
+    geometries = info.memory.geometries;
+    textures = info.memory.textures;
+    await pause();
+  }
+  d.input.hold('KeyW', false);
+  undo.forEach((f) => f());
+  const sorted = rows.map((r) => r.cpu).sort((a, b) => a - b);
+  const median = sorted[sorted.length >> 1];
+  const worst = rows.slice().sort((a, b) => b.cpu - a.cpu).slice(0, 10);
+  const last = rows[rows.length - 1];
+  return {
+    median, p95: sorted[Math.floor(sorted.length * 0.95)], max: sorted[sorted.length - 1], over2x: rows.filter((r) => r.cpu > median * 2).length,
+    end: [last.x, last.z, last.speed], topSpeed: Math.max(...rows.map((r) => r.speed)),
+    worst: worst.map((r) => ({ frame: r.i, cpu: +r.cpu.toFixed(1), total: +r.total.toFixed(1), speed: +r.speed.toFixed(1), programs: r.programs, geometries: r.geometries, textures: r.textures, parts: Object.fromEntries(Object.entries(r.parts).map(([k, v]) => [k, +v.toFixed(1)])) })),
+  };
+}
+
 async function cpuSplit(frames) {
   const { d, frame, pause } = window.__bench;
   const spots = [
@@ -393,6 +456,18 @@ if (opt.vs) {
     if (quality !== qualities[qualities.length - 1]) await new Promise((r) => setTimeout(r, cool));
   }
   if (outFile && outFile !== '-') writeFileSync(outFile, JSON.stringify(out, null, 1));
+  await browser.close();
+  process.exit(0);
+}
+if (opt.drive) {
+  const start = (opt.start || '-150,80').split(',').map(Number);
+  for (const quality of qualities) {
+    const page = await open(url, quality);
+    const r = await page.evaluate(driveTest, { frames, start });
+    console.log(`\n== ${quality} drive from ${start.join(',')}: CPU per frame median ${r.median.toFixed(1)} ms, p95 ${r.p95.toFixed(1)}, max ${r.max.toFixed(1)}, frames over 2x median: ${r.over2x} of ${frames}; top speed ${r.topSpeed.toFixed(1)} m/s, ended at ${r.end.map((v) => v.toFixed(0)).join(', ')}`);
+    for (const w of r.worst) console.log(`  frame ${String(w.frame).padStart(4)}  cpu ${String(w.cpu).padStart(6)} ms  speed ${String(w.speed).padStart(5)}  new programs ${w.programs} geometries ${w.geometries} textures ${w.textures}  ${JSON.stringify(w.parts)}`);
+    await page.close();
+  }
   await browser.close();
   process.exit(0);
 }

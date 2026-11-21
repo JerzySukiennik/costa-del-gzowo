@@ -290,7 +290,7 @@ async function boot() {
     const q = QUALITY[quality];
     ctx.quality = quality;
     ctx.cullScale = q.plantRange;
-    lighting.setShadows({ size: q.shadowMap, every: q.farShadowEvery });
+    lighting.setShadows({ size: q.shadowMap, every: q.farShadowEvery, far: q.shadowFar });
     trees.setQuality({ impostor: q.impostor, range: q.treeRange, forest: q.forest });
     ctx.grass.setDetail(q.grass, q.grassReach);
     pipeline.setSamples({ ao: q.ao, fog: q.fog, blur: q.blur });

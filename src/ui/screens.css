@@ -247,6 +247,8 @@
   color: var(--sc-dim);
   transition: background 0.25s var(--sc-ease), color 0.25s;
 }
+.sc-seg-grid { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; box-sizing: border-box; border-radius: 22px; }
+.sc-seg-grid .sc-seg-btn { padding: 7px 6px; text-align: center; }
 .sc-seg-btn.on { background: var(--sc-ink); color: #0b0d0c; text-shadow: none; }
 .sc-seg-btn:focus-visible { box-shadow: 0 0 0 2px var(--sc-amber); }
 

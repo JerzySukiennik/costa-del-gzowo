@@ -1,0 +1,28 @@
+{
+ "springs": [
+  {
+   "file": "costa-sun-goes-down.mp3",
+   "title": "Sun Goes Down",
+   "artist": "Costa del Gzowo OST",
+   "duration": 116.1
+  },
+  {
+   "file": "costa-golden-swagger.mp3",
+   "title": "Golden Swagger",
+   "artist": "Costa del Gzowo OST",
+   "duration": 121.8
+  },
+  {
+   "file": "costa-miami-soul.mp3",
+   "title": "Miami Soul",
+   "artist": "Costa del Gzowo OST",
+   "duration": 121.7
+  },
+  {
+   "file": "costa-sunshine-epic.mp3",
+   "title": "Sunshine Epic",
+   "artist": "Costa del Gzowo OST",
+   "duration": 119.7
+  }
+ ]
+}

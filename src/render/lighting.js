@@ -233,8 +233,12 @@ export async function createLighting({ renderer, scene, camera, assets }) {
     setStage(fn) {
       stage = fn;
     },
-    setShadows({ size, every }) {
+    setShadows({ size, every, far }) {
       if (every) farEvery = every;
+      if (far && csm.maxFar !== far) {
+        csm.maxFar = far;
+        csm.updateFrustums();
+      }
       if (!size) return;
       csm.shadowMapSize = size;
       for (const light of csm.lights) {

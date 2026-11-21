@@ -53,7 +53,7 @@ html, body { margin: 0; height: 100%; background: #0b0d0c; overflow: hidden; fon
 .lk-main { grid-column: 1 / -1; background: #f2a23a; color: #1c1408; }
 .lk-main:hover { background: #f6b25a; }
 #perf { right: auto; left: 16px; width: 372px; }
-.pf-quality { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pf-quality { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .pf-quality .lk-chip { display: grid; gap: 2px; }
 .pf-quality small { font-size: 10px; font-weight: 600; opacity: 0.55; }
 .pf-stats { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; margin: 0; }

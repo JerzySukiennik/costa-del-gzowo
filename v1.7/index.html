@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Costa del Gzowo</title>
+<link rel="stylesheet" href="src/ui/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+    "rapier": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.19.3/rapier.mjs"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="hud" hidden>
+  <div id="prompt"></div>
+  <div id="cluster">
+    <div id="speed"><span id="speed-value">0</span><small>km/h</small></div>
+    <div id="gear">P</div>
+    <div id="rpm"><i id="rpm-bar"></i></div>
+  </div>
+  <div id="damage-note"></div>
+  <div id="place">Sawgrass River Bridge</div>
+  <div id="radio"></div>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
