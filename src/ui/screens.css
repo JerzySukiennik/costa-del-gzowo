@@ -470,3 +470,11 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+.sc-card-sub { margin-top: 22px; }
+.sc-input { box-sizing: border-box; width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.06); color: inherit; font: inherit; font-size: 15px; outline: none; }
+.sc-input:focus { border-color: #f2a23a; }
+.sc-players { display: grid; gap: 6px; margin-top: 12px; }
+.sc-player { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); font-size: 14px; }
+.sc-player.me { background: rgba(242, 162, 58, 0.14); }
+.sc-player-note { opacity: 0.6; font-size: 12px; }

@@ -44,6 +44,25 @@ export function createHud() {
       clearTimeout(placeTimer);
       placeTimer = setTimeout(() => place.classList.remove('on'), 5000);
     },
+    net(title, detail) {
+      let box = el('net');
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'net';
+        document.body.appendChild(box);
+      }
+      const html = title ? `${title}<b>${detail || ''}</b>` : '';
+      if (box.dataset.html !== html) {
+        box.dataset.html = html;
+        box.textContent = '';
+        if (title) {
+          box.append(title);
+          const b = document.createElement('b');
+          b.textContent = detail || '';
+          box.append(b);
+        }
+      }
+    },
     note(text) {
       if (note.textContent !== text) note.textContent = text;
     },

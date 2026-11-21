@@ -281,10 +281,34 @@ export function createScreens(options = {}) {
       vehicleList.length > 1 ? el('div', { class: 'sc-car-note', text: 'Switching cars restarts the drive.' }) : null);
   }
 
+  const playersBox = el('div', { class: 'sc-players' }, el('div', { class: 'sc-player' }, el('span', { text: 'Playing alone' })));
+  const LINKS = { you: 'You', direct: 'Connected', relay: 'Connected, relayed', joining: 'Joining' };
+
+  function setPlayers(list, world) {
+    const rows = list.length ? list.map((p) => el('div', { class: `sc-player${p.me ? ' me' : ''}` }, el('span', { text: p.name }), el('span', { class: 'sc-player-note', text: LINKS[p.link] || 'Joining' }))) : [el('div', { class: 'sc-player' }, el('span', { text: 'Playing alone' }))];
+    playersBox.replaceChildren(...rows);
+    playersBox.dataset.world = world || '';
+  }
+
+  function buildName() {
+    const input = el('input', { type: 'text', class: 'sc-input', maxlength: '16', 'aria-label': 'Your name', autocomplete: 'off', spellcheck: 'false' });
+    input.value = cfg.name || '';
+    for (const type of ['keydown', 'keyup', 'keypress']) input.addEventListener(type, (event) => {
+      event.stopPropagation();
+      if (type === 'keydown' && event.key === 'Enter') input.blur();
+    });
+    input.addEventListener('change', () => {
+      const value = input.value.trim().slice(0, 16);
+      if (value) cb('onName', value);
+      else input.value = cfg.name || '';
+    });
+    return el('div', { class: 'sc-field' }, el('div', { class: 'sc-row' }, el('span', { text: 'Your name' })), input);
+  }
+
   function buildSettingsTab() {
     return el('div', { class: 'sc-tab-panel sc-tab-settings', 'data-tab-panel': 'settings' },
       el('div', { class: 'sc-tab-grid' },
-        el('div', { class: 'sc-card' }, el('div', { class: 'sc-card-title', text: 'Settings' }), buildSettings()),
+        el('div', { class: 'sc-card' }, el('div', { class: 'sc-card-title', text: 'Settings' }), buildSettings(), el('div', { class: 'sc-card-title sc-card-sub', text: 'Players here' }), buildName(), playersBox),
         el('div', { class: 'sc-card' }, el('div', { class: 'sc-card-title', text: 'Controls' }), buildControls())));
   }
 
@@ -701,6 +725,7 @@ export function createScreens(options = {}) {
     setProgress,
     ready,
     setTrack,
+    setPlayers,
     showPause,
     hidePause,
     openMenu,

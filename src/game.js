@@ -33,7 +33,7 @@ export async function createGame(ctx) {
   const rig = createCameraRig({ camera, physics });
   rig.rig.yaw = SPAWN.player.yaw;
 
-  const game = { mode: 'foot', transition: null, beams: false, water: null, time: 0 };
+  const game = { mode: 'foot', transition: null, beams: false, water: null, time: 0, ride: null };
   const entry = vehicle.bindEntry({ character, player, rig, game, groundBelow, onSeated: () => (exitHint = 4) });
   const moveInput = { x: 0, z: 0, sprint: false, jump: false };
   const f = new THREE.Vector3();
@@ -78,6 +78,44 @@ export async function createGame(ctx) {
 
   function beginExit() {
     if (entry.begin('exit')) game.transition = entry;
+  }
+
+  function beginRide(remote) {
+    const m = remote.vehicle.model;
+    ctx.net.startRide(remote);
+    game.mode = 'ride';
+    game.ride = remote;
+    player.setEnabled(false);
+    player.state.mode = 'car';
+    rig.setMode('car');
+    character.setScripted(null);
+    m.group.add(character.group);
+    character.group.position.set(m.seat.x, m.seat.y, -m.seat.z);
+    character.group.rotation.set(0, Math.PI / 2, 0);
+    if (audio) audio.door(false);
+  }
+
+  function endRide() {
+    const remote = game.ride;
+    if (ctx.net) ctx.net.stopRide();
+    character.group.getWorldPosition(v);
+    let yaw = player.state.yaw;
+    if (remote && remote.vehicle) {
+      const m = remote.vehicle.model;
+      const side = Math.sign(-m.seat.z) || 1;
+      m.group.localToWorld(v.set(m.seat.x, 0.4, -m.seat.z + side * 1.45));
+      yaw = Math.atan2(remote.proxy.forward.x, remote.proxy.forward.z);
+    }
+    scene.add(character.group);
+    const below = groundBelow(v.x, v.y + 1.4, v.z);
+    const y = below !== null ? below : Math.max(heightAt(v.x, v.z), game.water ? game.water.getHeightAt(v.x, v.z) - 1.2 : -1.2);
+    player.state.mode = 'foot';
+    player.teleport(v.x, y, v.z, yaw);
+    player.setEnabled(true);
+    character.group.rotation.set(0, yaw, 0);
+    game.mode = 'foot';
+    game.ride = null;
+    rig.setMode('foot');
   }
 
   function updateTransition(dt) {
@@ -173,10 +211,16 @@ export async function createGame(ctx) {
     doorWorld.copy(entry.doorLocal);
     carModel.group.localToWorld(doorWorld);
     const nearDoor = game.mode === 'foot' && !game.transition && doorWorld.distanceTo(player.center(v)) < 2.3;
+    const net = ctx.net || null;
+    if (game.mode === 'ride' && (!net || net.riding !== game.ride || !game.ride.vehicle || !game.ride.driving)) endRide();
+    const rideTarget = net && game.mode === 'foot' && !game.transition && !nearDoor ? net.rideNear(player.center(v)) : null;
     if (input.hit('KeyF') && !game.transition) {
       if (nearDoor) beginEnter();
+      else if (rideTarget) beginRide(rideTarget);
+      else if (game.mode === 'ride' && game.ride.proxy.state.speed < 4.5) endRide();
       else if (inCar && car.state.speed < 4.5 && !(car.keys && car.state.airborne)) beginExit();
     }
+    if (game.mode === 'ride') player.state.position.copy(game.ride.vehicle.model.group.position);
     if (inCar) {
       if (input.hit('KeyR')) {
         const wrecked = damage.state.exploded;
@@ -208,6 +252,7 @@ export async function createGame(ctx) {
     while (acc >= STEP) {
       car.substep(STEP);
       player.fixedUpdate(STEP, { ...moveInput, jump: first && moveInput.jump }, game.water);
+      if (net) net.fixed();
       physics.step();
       acc -= STEP;
       first = false;
@@ -243,10 +288,12 @@ export async function createGame(ctx) {
 
     exitHint = Math.max(0, exitHint - dt);
     if (nearDoor) hud.prompt('F', car.label || 'Enter car');
+    else if (rideTarget) hud.prompt('F', `Ride with ${rideTarget.profile.name}`);
+    else if (game.mode === 'ride' && game.ride.proxy.state.speed < 1.5) hud.prompt('F', 'Get out');
     else if (inCar && car.state.stalled) hud.prompt('R', damage.state.exploded ? 'Car wrecked, get a new one' : 'Engine flooded, reset car');
     else if (inCar && exitHint > 0 && car.state.speed < 1) hud.prompt('F', car.hint ? car.hint : car.keys ? 'Exit   ·   Space up   ·   C down   ·   Shift boost   ·   Q E radio' : 'Exit   ·   Q E radio   ·   T roof   ·   H lights');
     else hud.prompt('', '');
-    hud.drive(game.mode === 'car', car.state);
+    hud.drive(game.mode !== 'foot', game.mode === 'ride' ? game.ride.proxy.state : car.state);
     hud.note(damage.state.note);
     if (ctx.town && !game.cinematic) {
       const at = game.mode === 'car' ? car.position : player.state.position;
@@ -257,7 +304,8 @@ export async function createGame(ctx) {
       }
     }
 
-    if (!game.cinematic) rig.update(dt, input, player, car, game.water);
+    if (!game.cinematic) rig.update(dt, input, player, game.mode === 'ride' ? game.ride.proxy : car, game.water);
+    if (net) net.update(dt, camera);
     if (car.state.kick !== undefined && game.mode === 'car') {
       if (car.state.kick !== lastKick) {
         lastKick = car.state.kick;

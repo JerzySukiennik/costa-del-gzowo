@@ -1,6 +1,6 @@
 // Costa del Gzowo: bootstrap, loading flow, title cinematics, pause and menu states, main loop.
 import * as THREE from 'three';
-import { GAME, LAYERS, MUSIC, TOWN, WATER_OBSTACLES } from './config.js';
+import { GAME, LAYERS, MUSIC, SPAWN, TOWN, WATER_OBSTACLES } from './config.js';
 import { Assets } from './core/assets.js';
 import { createPhysics } from './core/physics.js';
 import { createInput } from './core/input.js';
@@ -17,6 +17,7 @@ import { createTown } from './world/town/town.js';
 import { createFallbackWater } from './world/fallbackWater.js';
 import { heightAt, flowAt } from './world/heightfield.js';
 import { createGame } from './game.js';
+import { createNameTags } from './ui/nametags.js';
 import { createAudio } from './audio/audio.js';
 import { createRadio } from './audio/radio.js';
 import { createSoundtrack } from './audio/soundtrack.js';
@@ -59,6 +60,11 @@ async function boot() {
   let car = params.get('car') || localStorage.getItem('costa-car') || VEHICLES[0].id;
   if (!VEHICLES.some((v) => v.id === car)) car = VEHICLES[0].id;
   const hooks = {};
+  let name = (params.get('name') || localStorage.getItem('costa-name') || '').trim().slice(0, 16);
+  if (!name) {
+    name = `Player ${Math.floor(10 + Math.random() * 90)}`;
+    localStorage.setItem('costa-name', name);
+  }
   const localMusic = params.get('soundtrack') !== 'public' && (await fetch(MUSIC.title.url, { method: 'HEAD' }).then((r) => r.ok, () => false));
   const screens = createScreens({
     title: GAME.title,
@@ -69,6 +75,8 @@ async function boot() {
     avatars: AVATARS,
     avatar,
     onAvatar: (id) => hooks.avatar && hooks.avatar(id),
+    name,
+    onName: (value) => hooks.name && hooks.name(value),
     vehicles: VEHICLES,
     vehicle: car,
     onVehicle: (id) => {
@@ -155,6 +163,41 @@ async function boot() {
   pipeline.water = water;
   play.setWater(water);
   ctx.radio = await createRadio({ audio: ctx.audio, folders: localMusic ? ['assets/music/', 'assets/music-public/'] : ['assets/music-public/'] });
+  if (!params.has('solo')) {
+    const tags = createNameTags();
+    const onPlayers = (list) => {
+      const others = list.filter((p) => !p.me);
+      screens.setPlayers(list);
+      play.hud.net('Online', others.length ? others.map((p) => p.name).join(', ') : 'Nobody else here yet');
+    };
+    import('./net/multiplayer.js')
+      .then(({ createMultiplayer }) => createMultiplayer(ctx, play, { name, car, avatar }, { tags, onPlayers }))
+      .then((net) => {
+        const [dx, dz] = [[0, 0], [-11, 0], [-22, 0], [11.5, 0.5]][net.slot] || [0, 0];
+        const c = play.car;
+        if ((dx || dz) && !c.state.occupied && Math.hypot(c.position.x - SPAWN.car.x, c.position.z - SPAWN.car.z) < 3) {
+          const p = play.player.state.position;
+          const waiting = play.game.mode === 'foot' && Math.hypot(p.x - SPAWN.player.x, p.z - SPAWN.player.z) < 3;
+          SPAWN.car.x += dx;
+          SPAWN.car.z += dz;
+          c.respawn();
+          if (waiting) {
+            SPAWN.player.x += dx;
+            SPAWN.player.z += dz;
+            play.player.teleport(SPAWN.player.x, heightAt(SPAWN.player.x, SPAWN.player.z), SPAWN.player.z, SPAWN.player.yaw);
+          }
+        }
+        ctx.net = net;
+        onPlayers(net.players());
+        window.addEventListener('pagehide', () => net.leave());
+      })
+      .catch((error) => console.warn('Multiplayer unavailable, playing alone.', error));
+  }
+  hooks.name = (value) => {
+    name = value;
+    localStorage.setItem('costa-name', value);
+    if (ctx.net) ctx.net.setProfile({ name: value });
+  };
   const soundtrack = createSoundtrack({ audio: ctx.audio, local: localMusic, onTrack: (track) => screens.setTrack(track) });
   const cinematics = createCinematics({ camera, pipeline, lighting });
   play.game.cinematic = true;
@@ -244,6 +287,7 @@ async function boot() {
     avatar = id;
     localStorage.setItem('costa-avatar', id);
     play.avatars.set(id).catch((error) => console.warn('Avatar unavailable.', error));
+    if (ctx.net) ctx.net.setProfile({ avatar: id });
   };
   hooks.volume = (value) => {
     volume = value;
@@ -337,6 +381,9 @@ async function boot() {
     renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, skyline, water, play, input, ctx, screens, cinematics, soundtrack, town: ctx.town,
     get fps() {
       return Math.round(fps);
+    },
+    get net() {
+      return ctx.net || null;
     },
     get mode() {
       return mode;
