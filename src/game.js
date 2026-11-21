@@ -263,6 +263,21 @@ export async function createGame(ctx) {
     pushA.set(v.x, onFoot ? v.y : -100, v.z, 0.75);
     pushB.set(car.position.x, car.position.y, car.position.z, 2.5);
     bodyShadow.set(v.x, onFoot ? v.y : -1000, v.z, 0.3);
+    if (grass.press) {
+      const cv = car.velocity;
+      const cs = Math.hypot(cv.x, cv.z);
+      const dirX = cs > 0.5 ? cv.x / cs : car.forward.x;
+      const dirZ = cs > 0.5 ? cv.z / cs : car.forward.z;
+      let touching = 0;
+      for (const w of car.wheels) {
+        if (!w.contact) continue;
+        touching++;
+        grass.press({ x: w.point.x, z: w.point.z, radius: 0.27, press: 1, dirX, dirZ, soft: 0.12 });
+      }
+      if (touching) grass.press({ x: car.position.x, z: car.position.z, radius: 0.86, length: 2.15, axisX: car.forward.x, axisZ: car.forward.z, dirX, dirZ, body: 0.9, soft: 0.25 });
+      const walker = player.state;
+      if (game.mode === 'foot' && walker.grounded && !walker.inWater) grass.press({ x: walker.position.x, z: walker.position.z, radius: 0.3, press: 0.92, dirX: walker.velocity.x, dirZ: walker.velocity.z, soft: 0.16 });
+    }
     grass.update(camera.position, pushA, pushB, carModel.group.matrixWorld, bodyShadow);
     if (audio) audio.update(dt, { game, car, player, camera, water: game.water });
     input.endFrame();

@@ -39,6 +39,7 @@ export async function createRoadster(ctx, spawn, deps) {
           }
           continue;
         }
+        if (ctx.grass && ctx.grass.press && n.groundDist < 6 && d.y < -0.3) ctx.grass.press({ x: p.x + d.x * n.groundDist, z: p.z + d.z * n.groundDist, radius: 1.1 + n.groundDist * 0.3, press: n.valve * (1 - n.groundDist / 6) * 0.95, radial: true, soft: 0.7 });
         if (n.valve < 0.3 || n.groundDist > 3) continue;
         if (Math.random() > dt * 26 * n.valve) continue;
         p.addScaledVector(d, n.groundDist);
