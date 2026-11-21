@@ -55,6 +55,7 @@ export async function createGame(ctx) {
   let lastKick = car.state.kick;
   let boostKick = 0;
   let lastLanding = 0;
+  let placeName = 'Sawgrass River Bridge';
   const pushA = new THREE.Vector4();
   const pushB = new THREE.Vector4();
   const bodyShadow = new THREE.Vector4();
@@ -247,6 +248,14 @@ export async function createGame(ctx) {
     else hud.prompt('', '');
     hud.drive(game.mode === 'car', car.state);
     hud.note(damage.state.note);
+    if (ctx.town && !game.cinematic) {
+      const at = game.mode === 'car' ? car.position : player.state.position;
+      const here = ctx.town.contains(at.x, at.z) ? ctx.town.name : 'Sawgrass River Bridge';
+      if (here !== placeName) {
+        placeName = here;
+        hud.place(here);
+      }
+    }
 
     if (!game.cinematic) rig.update(dt, input, player, car, game.water);
     if (car.state.kick !== undefined && game.mode === 'car') {

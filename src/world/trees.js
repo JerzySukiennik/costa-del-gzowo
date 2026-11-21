@@ -1,7 +1,8 @@
 // Costa del Gzowo: trees with mesh LODs that end in baked impostors, procedural palms, small trees and the far impostor forest.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { heightAt } from './heightfield.js';
+import { WORLD } from '../config.js';
+import { heightAt, townDistance } from './heightfield.js';
 import { hookMaterial } from '../render/shaderHooks.js';
 import { rng, pickPoints, clearOfBuilt, slopeAt, bakeMesh, variantsOf, instancedVariant } from './scatter.js';
 
@@ -435,7 +436,7 @@ export async function createTrees(ctx) {
   const palmParts = [{ geometry: palmKinds[0].trunk, material: trunkMat }, { geometry: palmKinds[0].fronds, material: frondMat }];
   const palmImpostor = captureImpostor(ctx, palmParts, sizeOf(palmParts), 0);
   const farSpots = pickPoints({
-    count: 4200, seed: 91, spacing: 5, attempts: 14,
+    count: 4200, seed: 91, spacing: 5, attempts: 14, region: WORLD.core - 6,
     accept: (x, z) => {
       const h = heightAt(x, z);
       if (h < 0.7 || !clearOfBuilt(x, z, 4)) return 0;
@@ -448,11 +449,25 @@ export async function createTrees(ctx) {
     ...islandImpostors.map((material) => ({ material, scale: [2.0, 3.6], share: 0.065 })),
     { material: palmImpostor, scale: [0.8, 1.3], share: 0.18 },
   ];
+  const outside = (x, z) => Math.abs(x) > WORLD.core - 6 || Math.abs(z) > WORLD.core - 6;
+  const ringSpots = pickPoints({
+    count: Math.round((4200 * 4 * ((WORLD.half - 6) ** 2 - (WORLD.core - 6) ** 2)) / (4 * (WORLD.core - 6) ** 2 - 430 * 400)), seed: 92, spacing: 5, attempts: 14,
+    accept: (x, z) => {
+      if (!outside(x, z) || townDistance(x, z) < 10) return 0;
+      const h = heightAt(x, z);
+      if (h < 0.7 || !clearOfBuilt(x, z, 4)) return 0;
+      return 0.4 + terrain.vegAt(x, z).forest * 0.6;
+    },
+  });
+  const keep = (p) => townDistance(p.x, p.z) > 10;
   let start = 0;
+  let ringStart = 0;
   for (const field of fields) {
     const n = Math.floor(farSpots.length * field.share);
-    group.add(impostorField(field.material, farSpots.slice(start, start + n), field.scale));
+    const m = Math.floor(ringSpots.length * field.share);
+    group.add(impostorField(field.material, [...farSpots.slice(start, start + n), ...ringSpots.slice(ringStart, ringStart + m)].filter(keep), field.scale));
     start += n;
+    ringStart += m;
   }
 
   const zero = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -491,5 +506,5 @@ export async function createTrees(ctx) {
   }
 
   scene.add(group);
-  return { group, heroSpots, update, forceMeshes };
+  return { group, heroSpots, update, forceMeshes, palms: { kinds: palmKinds, trunkMat, frondMat } };
 }

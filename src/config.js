@@ -34,8 +34,20 @@ export const RADIO = [
 
 export const WORLD = {
   waterLevel: 0,
-  half: 320,
+  half: 460,
+  core: 320,
   flowSpeed: 0.55,
+};
+
+export const TOWN = {
+  name: 'Gzowo Springs',
+  x0: 256,
+  x1: 414,
+  z0: -71,
+  z1: 71,
+  ground: 4.28,
+  street: 4.4,
+  walk: 4.44,
 };
 
 export const LAYERS = {

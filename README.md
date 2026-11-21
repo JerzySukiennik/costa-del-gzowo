@@ -25,6 +25,12 @@ python3 Niepotrzebne/devserver.py 8905
 | M | map and menu | map and menu |
 | Esc | pause | pause |
 
+## Gzowo Springs
+
+Follow the road east over the bridge: it no longer ends at a barrier but runs into Gzowo Springs, a small Florida town in a valley of forested hills. Main Street has kerbed pavements, parking with meters, two cross streets (Palm Ave with working traffic lights and walk signals, Rocket St with stop signs), back alleys, a public car park, a gas station and Rocket Park with its rocket monument. About twenty buildings, each with its own facade: shopfronts with lit interiors behind the glass, awnings that move in the wind, painted and neon signs, murals, graffiti, posters and stickers, fire escapes, roof clutter. Parked cars, bins, newspaper boxes and cones can be pushed around.
+
+The world grew from 640 to 920 m square to make room: a ring of hills and forest around the old map, which stays as it was.
+
 ## Avatars and cars
 
 The menu (M) has an Avatar tab and a Garage tab.
@@ -48,6 +54,7 @@ Three sources, picked automatically:
 
 - `src/render` frame pipeline (HDR opaque pass, AO, water composite, volumetric fog, TAA, motion blur, bloom, auto exposure, AgX grade), lighting, shader hooks
 - `src/world` heightfield, terrain, bridge and road, trees with impostor LODs, plants, grass, props, skyline
+- `src/world/town` Gzowo Springs: street plan (`layout.js`), geometry batches (`kit.js`), building parts and buildings, street furniture, materials (texture-array facades, interior-mapped windows, atlas decals), the code-drawn atlas
 - `src/water` river rendering and interaction (FFT ripples, GPU wave simulation, planar reflection, caustics, splash particles, underwater pass)
 - `src/vehicle` convertible (body, parts, interior, roof, dynamics, damage), entry choreography, vehicle registry, and `roadster/` (thruster car)
 - `src/player`, `src/camera` (chase rig and title cinematics), `src/audio` (sound mix, music, radio), `src/fx`, `src/ui` (HUD, title, pause and menu screens, radio switcher)
@@ -56,6 +63,8 @@ Three sources, picked automatically:
 ## Assets and licences
 
 - Sky, PBR textures and photoscanned models: [Poly Haven](https://polyhaven.com), CC0. Tree and rock models were reduced with `Niepotrzebne/tools/lod_tree.mjs`.
+- Town textures (1k, CC0, [Poly Haven](https://polyhaven.com)): Painted Plaster Wall, Painted Worn Brick, Large Red Bricks, Clay Roof Tiles 02, Distressed Painted Planks, Corrugated Iron, Painted Metal Shutter, Concrete Pavement. Fetched with `Niepotrzebne/tools/fetch_assets.py`.
+- Town signs, neon, murals, graffiti, posters, stickers and street paint are drawn in code at load time (`src/world/town/atlas.js`); every business, band and brand in them is invented.
 - Sound: recordings from [freesound.org](https://freesound.org), all CC0, listed in `assets/audio/CREDITS.md`.
 - Radio station covers: two generated images and twelve drawn by `Niepotrzebne/tools/make_covers.py`.
 - The convertible, the default character, bridge, palms and water are generated in code.

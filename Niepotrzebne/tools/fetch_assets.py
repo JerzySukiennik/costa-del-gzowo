@@ -30,6 +30,14 @@ TEXTURES = {
     "rusty_metal_02": "1k",
     "fabric_leather_01": "1k",
     "denim_fabric": "1k",
+    "painted_plaster_wall": "1k",
+    "painted_worn_brick": "1k",
+    "large_red_bricks": "1k",
+    "clay_roof_tiles_02": "1k",
+    "distressed_painted_planks": "1k",
+    "corrugated_iron": "1k",
+    "painted_metal_shutter": "1k",
+    "concrete_pavement": "1k",
 }
 
 MODELS = {

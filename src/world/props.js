@@ -232,7 +232,7 @@ export async function createProps(ctx) {
 
   const barrierA = model.concrete_road_barrier[0];
   const barrierB = model.concrete_road_barrier_02[0];
-  for (const sx of [-1, 1]) {
+  for (const sx of [-1]) {
     const x = sx * 238;
     const y = roadY(x);
     [-3.4, 0, 3.4].forEach((z, i) => {

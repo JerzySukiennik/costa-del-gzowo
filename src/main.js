@@ -1,6 +1,6 @@
 // Costa del Gzowo: bootstrap, loading flow, title cinematics, pause and menu states, main loop.
 import * as THREE from 'three';
-import { GAME, LAYERS, MUSIC, WATER_OBSTACLES } from './config.js';
+import { GAME, LAYERS, MUSIC, TOWN, WATER_OBSTACLES } from './config.js';
 import { Assets } from './core/assets.js';
 import { createPhysics } from './core/physics.js';
 import { createInput } from './core/input.js';
@@ -13,6 +13,7 @@ import { createPlants } from './world/plants.js';
 import { createGrass } from './world/grass.js';
 import { createProps } from './world/props.js';
 import { createSkyline } from './world/skyline.js';
+import { createTown } from './world/town/town.js';
 import { createFallbackWater } from './world/fallbackWater.js';
 import { heightAt, flowAt } from './world/heightfield.js';
 import { createGame } from './game.js';
@@ -124,6 +125,7 @@ async function boot() {
   const ctx = { renderer, scene, camera, assets, lighting, physics, terrain, input, quality, avatar, car, time: { value: 0 }, cull: [] };
   status('Growing trees');
   const trees = await createTrees(ctx);
+  ctx.trees = trees;
   await nextFrame();
   status('Scattering plants and rocks');
   const plants = await createPlants(ctx);
@@ -131,9 +133,13 @@ async function boot() {
   status('Placing props');
   ctx.props = await createProps(ctx);
   const skyline = createSkyline(ctx);
+  status('Building Gzowo Springs');
+  await nextFrame();
+  ctx.town = await createTown(ctx);
 
   trees.forceMeshes();
-  const sun = lighting.buildSunDepth(new THREE.Vector3(0, 0, 0), 190);
+  const townCorners = [[TOWN.x0, TOWN.z0], [TOWN.x1, TOWN.z0], [TOWN.x0, TOWN.z1], [TOWN.x1, TOWN.z1]].flatMap(([x, z]) => [new THREE.Vector3(x, 0, z), new THREE.Vector3(x + 40, 30, z)]);
+  const sun = lighting.buildSunDepth(new THREE.Vector3(0, 0, 0), 190, 4096, townCorners);
   pipeline.setSunShadow(sun.texture, sun.matrix);
   ctx.grass.setShadow(sun.texture, sun.matrix);
   pipeline.fogMat.uniforms.uSunDir.value.copy(lighting.sunDirection);
@@ -311,6 +317,7 @@ async function boot() {
         ctx.grass.update(camera.position);
       }
       trees.update(camera.position);
+      ctx.town.update(dt, elapsed, camera);
       for (const c of ctx.cull) c.object.visible = (c.x - camera.position.x) ** 2 + (c.z - camera.position.z) ** 2 < c.range * c.range;
       lighting.update();
       pipeline.render(dt, elapsed);
@@ -331,7 +338,7 @@ async function boot() {
   }
 
   window.__dbg = {
-    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, skyline, water, play, input, ctx, screens, cinematics, deck, soundtrack,
+    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, skyline, water, play, input, ctx, screens, cinematics, deck, soundtrack, town: ctx.town,
     get fps() {
       return Math.round(fps);
     },
