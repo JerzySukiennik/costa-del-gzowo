@@ -32,7 +32,7 @@ The menu (M) has an Avatar tab and a Garage tab.
 - Avatars: Dario (a hand-sculpted procedural character) and Jurek (a baked outfit with the hood up plus a trained 3D Gaussian head, drawn in the transparent pass and lit by the scene). `?avatar=jurek` selects it from the URL. The Jurek assets are rebuilt with `Niepotrzebne/tools/bake_jurek.mjs` from the Avatar project.
 - Cars: the Costa GT Convertible and the thruster Roadster. Switching restarts the drive; `?car=roadster` selects it from the URL.
 
-Roadster keys: Space lifts off and climbs while held (up to about 450 m), releasing it holds the altitude, C descends to a soft landing. In the air W flies forward, S brakes, A / D turn, Shift boosts, I / K pitch, J / L roll. G toggles flight assist (off: Space is raw thrust and nothing holds the car up). On the ground Shift boosts and Shift + S brakes with the front nozzles. In the Roadster the handbrake is X and the camera distance is V.
+Roadster keys: Space lifts off and climbs while held (gently at first, faster the longer you hold, up to about 450 m), releasing it holds the altitude, C descends to a soft landing or to a hover just above water. In the air W flies forward, S brakes to a stop (and backs up if held), A / D turn and the car flies where its nose points, Shift boosts, I / K pitch, J / L roll. G toggles flight assist (off: Space is raw thrust and nothing holds the car up). On the ground Shift boosts and Shift + S brakes with the front nozzles. In the Roadster the handbrake is X and the camera distance is V.
 
 ## Music
 

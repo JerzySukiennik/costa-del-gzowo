@@ -48,6 +48,7 @@ export async function createGame(ctx) {
   let carDryTime = 5;
   let stepTimer = 0;
   let exitHint = 0;
+  let wakeTimer = 0;
   let lastHitSeen = 0;
   let wasOccupied = false;
   const carKeys = { handbrake: 'Space', camera: 'KeyC', ...(car.keys || {}) };
@@ -121,9 +122,15 @@ export async function createGame(ctx) {
         }
       }
       carModel.paintUniforms.uDirt.value = Math.max(0.05, carModel.paintUniforms.uDirt.value - dt * 0.08);
+      wakeTimer -= dt;
+      if (water && water.addRipple && cs.speed > 2.5 && wakeTimer <= 0) {
+        wakeTimer = 0.09;
+        v.copy(car.position).addScaledVector(car.forward, Math.sign(cs.forwardSpeed || 1) * 1.9);
+        water.addRipple(v.x, v.z, 1.5, Math.min(4, 0.6 + cs.speed * 0.16) * Math.min(1, cs.submersion * 3));
+      }
     } else {
       carDryTime += dt;
-      if (carDryTime > 1.2) carWasWet = false;
+      if (carDryTime > 0.5) carWasWet = false;
       const loose = car.wheels.reduce((a, w) => a + (w.contact ? w.surf.loose : 0), 0) / 4;
       carModel.paintUniforms.uDirt.value = Math.min(1, carModel.paintUniforms.uDirt.value + dt * loose * cs.speed * 0.0016);
     }

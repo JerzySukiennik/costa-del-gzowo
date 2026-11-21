@@ -90,6 +90,7 @@ export async function createRoadsterModel(ctx) {
   });
   if (n.Wing) n.Wing.visible = false;
   const car = n.Roadster || root;
+  if (n.Nozzle_FL && n.Nozzle_FR && n.Nozzle_FL.parent === n.Nozzle_FR.parent && n.Nozzle_FL.position.length() > 1) n.Nozzle_FL.position.set(-n.Nozzle_FR.position.x, n.Nozzle_FR.position.y, n.Nozzle_FR.position.z);
 
   const mats = {};
   root.traverse((o) => {

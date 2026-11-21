@@ -159,6 +159,9 @@ export function createRoadsterPhysics({ physics, terrain, model, spawn, input })
     setWater(w) {
       water = w;
     },
+    get water() {
+      return water;
+    },
     substep,
     sync,
     reset() {
