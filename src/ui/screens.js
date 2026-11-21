@@ -6,10 +6,10 @@ import { heightAt } from '../world/heightfield.js';
 const INK = '#f6f1e7';
 const AMBER = '#f2a23a';
 const TABS = [['map', 'Map'], ['avatar', 'Avatar'], ['garage', 'Garage'], ['settings', 'Settings']];
-const QUALITY = [['ultra', 'Ultra'], ['high', 'High'], ['medium', 'Medium']];
+const QUALITY = [['cinematic', 'Cinematic'], ['ultra', 'Ultra'], ['high', 'High'], ['medium', 'Medium']];
 const FOOT = [['Move', ['W', 'A', 'S', 'D']], ['Camera', ['Mouse']], ['Sprint', ['Shift']], ['Jump', ['Space']], ['Enter car', ['F']]];
 const CAR = [['Throttle and brake', ['W', 'S']], ['Steer', ['A', 'D']], ['Handbrake', ['Space']], ['Exit car', ['F']], ['Radio', ['Q', 'E']], ['Roof', ['T']], ['Lights', ['H']], ['Camera', ['C']], ['Reset car', ['R']]];
-const COMMON = [['Pause', ['Esc']], ['Map and menu', ['M']], ['Look editor', ['O']]];
+const COMMON = [['Pause', ['Esc']], ['Map and menu', ['M']], ['Look editor', ['O']], ['Quality and speed panel', ['P']]];
 const ROADSTER = [['Fly up', ['Space']], ['Hold altitude', ['release']], ['Descend and land', ['C']], ['Fly forward and brake', ['W', 'S']], ['Turn', ['A', 'D']], ['Boost', ['Shift']], ['Pitch and roll', ['I', 'K', 'J', 'L']], ['Flight assist', ['G']], ['Handbrake', ['X']], ['Camera', ['V']]];
 const HELI = [['Climb', ['Space']], ['Hold altitude', ['release']], ['Descend and land', ['C']], ['Fly forward, brake and back up', ['W', 'S']], ['Turn', ['A', 'D']], ['Fly fast', ['Shift']], ['Landing light', ['H']], ['Camera', ['V']]];
 const AVATARS = [{ id: 'default', name: 'Default', note: 'Everyday summer clothes', figure: 'plain' }];
@@ -142,7 +142,7 @@ export function createScreens(options = {}) {
   function buildControls(single = false) {
     return el('div', { class: 'sc-controls' },
       el('div', { class: `sc-keys-grid${single ? ' one' : ''}` }, keyCol('On foot', FOOT), keyCol('In the car', CAR), keyCol('Roadster', ROADSTER), keyCol('Helicopter', HELI)),
-      el('div', { class: 'sc-keys-common' }, keyCol('Anywhere', cfg.lookTools ? COMMON : COMMON.filter(([label]) => label !== 'Look editor'))));
+      el('div', { class: 'sc-keys-common' }, keyCol('Anywhere', cfg.lookTools ? COMMON : COMMON.slice(0, 2))));
   }
 
   function buildPanel(name, heading, body) {
@@ -307,6 +307,7 @@ export function createScreens(options = {}) {
       el('div', { class: 'sc-tab-grid' },
         el('div', { class: 'sc-card' }, el('div', { class: 'sc-card-title', text: 'Settings' }), buildSettings(),
           cfg.lookTools ? el('button', { type: 'button', class: 'sc-look', 'data-nav': '', onclick: () => cb('onLook') }, 'Look editor: colours, lens and camera') : null,
+          cfg.lookTools ? el('button', { type: 'button', class: 'sc-look', 'data-nav': '', onclick: () => cb('onPerf') }, 'Quality and speed: compare live, benchmark') : null,
           el('div', { class: 'sc-card-title sc-card-sub', text: 'Players here' }), buildName(), playersBox),
         el('div', { class: 'sc-card' }, el('div', { class: 'sc-card-title', text: 'Controls' }), buildControls())));
   }
@@ -722,6 +723,10 @@ export function createScreens(options = {}) {
 
   return {
     setProgress,
+    syncQuality(value) {
+      values.quality = value;
+      sync();
+    },
     ready,
     setTrack,
     setPlayers,

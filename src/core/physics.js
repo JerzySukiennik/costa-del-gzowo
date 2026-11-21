@@ -46,6 +46,10 @@ export async function createPhysics() {
       const desc = RAPIER.ColliderDesc.cylinder((y1 - y0) / 2, radius).setTranslation(x, (y0 + y1) / 2, z).setFriction(0.8);
       return tag(world.createCollider(desc), surface);
     },
+    remove(collider) {
+      surfaces.delete(collider.handle);
+      world.removeCollider(collider, false);
+    },
     staticTrimesh(vertices, indices, surface = 'asphalt', friction = 1) {
       const desc = RAPIER.ColliderDesc.trimesh(vertices, indices).setFriction(friction);
       return tag(world.createCollider(desc), surface);

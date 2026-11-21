@@ -1,4 +1,4 @@
-// Costa del Gzowo: bootstrap, loading flow, title cinematics, pause and menu states, main loop.
+// Costa del Gzowo: bootstrap, loading flow, quality levels applied live, title cinematics, pause and menu states, main loop.
 import * as THREE from 'three';
 import { GAME, LAYERS, MUSIC, SPAWN, TOWN, WATER_OBSTACLES } from './config.js';
 import { Assets } from './core/assets.js';
@@ -6,6 +6,10 @@ import { createPhysics } from './core/physics.js';
 import { createInput } from './core/input.js';
 import { Pipeline } from './render/pipeline.js';
 import { createLighting } from './render/lighting.js';
+import { QUALITY, createPerf, renderScale } from './render/quality.js';
+import { createMeshLod } from './render/meshLod.js';
+import { createModelCull } from './render/modelCull.js';
+import { createWaterWatch } from './render/waterWatch.js';
 import { createTerrain } from './world/terrain.js';
 import { createBridge } from './world/bridge.js';
 import { createTrees } from './world/trees.js';
@@ -20,6 +24,7 @@ import { createGame } from './game.js';
 import { createNameTags } from './ui/nametags.js';
 import { createLook } from './render/look.js';
 import { createLookEditor } from './ui/lookEditor.js';
+import { createPerfPanel } from './ui/perfPanel.js';
 import { createAudio } from './audio/audio.js';
 import { createRadio } from './audio/radio.js';
 import { createSoundtrack } from './audio/soundtrack.js';
@@ -30,7 +35,6 @@ import { VEHICLES } from './vehicle/vehicles.js';
 
 const canvas = document.getElementById('view');
 const params = new URLSearchParams(location.search);
-const QUALITY = { ultra: { ratio: 1.25, scale: 1 }, high: { ratio: 1, scale: 1 }, medium: { ratio: 1, scale: 0.72 } };
 const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 const stored = (key, fallback) => {
   const value = parseFloat(localStorage.getItem(key));
@@ -42,7 +46,7 @@ async function startWater(ctx, obstacles) {
     const module = await import('./water/WaterSystem.js');
     const water = new module.WaterSystem({
       renderer: ctx.renderer, scene: ctx.scene, camera: ctx.camera, sunDirection: ctx.lighting.sunDirection, sunColor: ctx.lighting.sunColor,
-      heightAt, flowAt, obstacles, quality: ctx.quality,
+      heightAt, flowAt, obstacles, quality: QUALITY[ctx.quality].water,
     });
     await water.init();
     return water;
@@ -82,6 +86,7 @@ async function boot() {
     onName: (value) => hooks.name && hooks.name(value),
     lookTools,
     onLook: () => hooks.look && hooks.look(),
+    onPerf: () => hooks.perf && hooks.perf(),
     vehicles: VEHICLES,
     vehicle: car,
     onVehicle: (id) => hooks.vehicle && hooks.vehicle(id),
@@ -127,14 +132,15 @@ async function boot() {
   await nextFrame();
   status('Building the bridge');
   const bridge = await createBridge({ assets, lighting, physics, scene, noise: terrain.noise });
-  const ctx = { renderer, scene, camera, assets, lighting, physics, terrain, input, quality, avatar, car, time: { value: 0 }, cull: [] };
+  const perf = createPerf(params);
+  const ctx = { renderer, scene, camera, assets, lighting, physics, terrain, input, quality, avatar, car, time: { value: 0 }, cull: [], perf };
   status('Growing trees');
-  const trees = await createTrees(ctx);
+  const trees = await createTrees(ctx, { impostor: QUALITY[quality].impostor, range: QUALITY[quality].treeRange, forest: QUALITY[quality].forest });
   ctx.trees = trees;
   await nextFrame();
   status('Scattering plants and rocks');
   const plants = await createPlants(ctx);
-  ctx.grass = createGrass(ctx, { density: quality === 'medium' ? 0.55 : 1 });
+  ctx.grass = createGrass(ctx, { density: QUALITY[quality].grass, reach: QUALITY[quality].grassReach });
   status('Placing props');
   ctx.props = await createProps(ctx);
   const skyline = createSkyline(ctx);
@@ -158,6 +164,25 @@ async function boot() {
   status('Preparing the car');
   ctx.onAvatar = (id) => hooks.avatar && hooks.avatar(id, true);
   const play = await createGame(ctx);
+  const lod = createMeshLod({ camera, perf });
+  ctx.lod = lod;
+  lod.watch(play.character.group);
+  for (const item of play.fleet) lod.watch(item.model.group);
+  if (play.statues) for (const item of play.statues.items) lod.watch(item.rig.group);
+  const modelCull = createModelCull({ camera, perf });
+  for (const item of play.fleet) modelCull.watch(item.model.group, item.id === 'heli' ? 9 : 6);
+  if (play.statues) for (const item of play.statues.items) modelCull.watch(item.rig.group, 1.8, 1);
+  lighting.setStage((name, on, light) => {
+    const cascade = lighting.csm.lights.indexOf(light);
+    modelCull.stage(name, on);
+    lod.stage(name, on, cascade);
+    if (perf.shadows) trees.stage(name, on, light, cascade);
+  });
+  pipeline.stage = (name, on) => {
+    modelCull.stage(name, on);
+    lod.stage(name, on);
+    if (perf.reflection) trees.stage(name, on);
+  };
   const look = createLook(null, lookTools);
   const useLook = (values) => {
     pipeline.look = values;
@@ -169,25 +194,44 @@ async function boot() {
     onClose: () => showLook(false),
     onCompare: (on) => useLook(on ? look.preview('original') : look.values),
   }) : null;
-  function showLook(on) {
-    if (!lookEditor) return;
-    lookOpen = on;
-    lookEditor.show(on);
+  let perfPanel = null;
+  let perfOpen = false;
+  function showTool(on) {
     if (on && document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
     if (!on && !params.has('auto') && canvas.requestPointerLock) {
       const result = canvas.requestPointerLock();
       if (result && result.catch) result.catch(() => {});
     }
   }
+  function showLook(on) {
+    if (!lookEditor) return;
+    if (on && perfOpen) showPerf(false);
+    lookOpen = on;
+    lookEditor.show(on);
+    showTool(on);
+  }
+  function showPerf(on) {
+    if (!perfPanel || (perfPanel.running && !on)) return;
+    if (on && lookOpen) showLook(false);
+    perfOpen = on;
+    perfPanel.show(on);
+    showTool(on);
+  }
   hooks.look = () => {
     if (hooks.resume) hooks.resume();
     setTimeout(() => showLook(true), 400);
+  };
+  hooks.perf = () => {
+    if (hooks.resume) hooks.resume();
+    setTimeout(() => showPerf(true), 400);
   };
   status('Filling the river');
   const water = await startWater(ctx, [...WATER_OBSTACLES, ...plants.obstacles]);
   if (water.setSunShadow) water.setSunShadow(sun.texture, sun.matrix);
   pipeline.water = water;
   play.setWater(water);
+  const waterWatch = water.surface && water.surface.mesh ? createWaterWatch(renderer, [water.surface.mesh, water.surface.underMesh], camera) : null;
+  pipeline.reflectionGate = () => !perf.reflection || !waterWatch || waterWatch.visible;
   ctx.radio = await createRadio({ audio: ctx.audio, folders: localMusic ? ['assets/music/', 'assets/music-public/'] : ['assets/music-public/'] });
   if (!params.has('solo')) {
     const tags = createNameTags();
@@ -230,22 +274,40 @@ async function boot() {
   function resize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const q = QUALITY[quality];
-    const ratio = Math.min(window.devicePixelRatio || 1, q.ratio);
+    const { ratio, scale } = renderScale(QUALITY[quality], window.devicePixelRatio || 1);
     renderer.setPixelRatio(ratio);
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    pipeline.settings.scale = q.scale;
+    pipeline.settings.scale = scale;
     pipeline.setSize(w, h, ratio);
     lighting.resize();
     play.setViewport(pipeline.height);
+    trees.setViewport(pipeline.height);
+    lod.setViewport(pipeline.height);
+  }
+  function applyQuality() {
+    const q = QUALITY[quality];
+    ctx.quality = quality;
+    ctx.cullScale = q.plantRange;
+    lighting.setShadows({ size: q.shadowMap, every: q.farShadowEvery });
+    trees.setQuality({ impostor: q.impostor, range: q.treeRange, forest: q.forest });
+    ctx.grass.setDetail(q.grass, q.grassReach);
+    pipeline.setSamples({ ao: q.ao, fog: q.fog, blur: q.blur });
+    if (water.params && water.params.reflectionScale !== undefined) {
+      water.params.reflectionScale = q.reflection[0];
+      water.params.reflectionInterval = q.reflection[1];
+    }
+    resize();
+    pipeline.reset = true;
   }
   window.addEventListener('resize', resize);
-  resize();
+  applyQuality();
 
   let mode = 'title';
   let paused = false;
+  let benching = false;
+  let held = false;
   let elapsed = 0;
   let frames = 0;
   let fps = 60;
@@ -301,11 +363,10 @@ async function boot() {
     hooks.resume();
   };
   hooks.quality = (value) => {
-    if (!QUALITY[value]) return;
+    if (!QUALITY[value] || value === quality) return;
     quality = value;
     localStorage.setItem('costa-quality', quality);
-    resize();
-    pipeline.reset = true;
+    applyQuality();
   };
   hooks.avatar = (id, applied = false) => {
     avatar = id;
@@ -331,6 +392,10 @@ async function boot() {
       screens.showPause();
     } else if (e.code === 'KeyO' && lookEditor) {
       showLook(!lookOpen);
+    } else if (e.code === 'KeyP' && perfPanel) {
+      showPerf(!perfOpen);
+    } else if (perfOpen && perfPanel.key(e.code)) {
+      e.preventDefault();
     } else if (e.code === 'KeyM' || e.code === 'Tab') {
       e.preventDefault();
       setPaused(true);
@@ -344,7 +409,12 @@ async function boot() {
       lookEditor.show(false);
       return;
     }
-    if (mode === 'playing' && !document.pointerLockElement && !paused && !lookOpen && !params.has('auto')) {
+    if (perfOpen && document.pointerLockElement && !perfPanel.running) {
+      perfOpen = false;
+      perfPanel.show(false);
+      return;
+    }
+    if (mode === 'playing' && !document.pointerLockElement && !paused && !lookOpen && !perfOpen && !params.has('auto')) {
       setPaused(true);
       screens.showPause();
     }
@@ -371,32 +441,45 @@ async function boot() {
     }
   }
 
+  function renderFrame(dt) {
+    renderer.info.reset();
+    ctx.time.value = elapsed;
+    updateFade(dt);
+    play.update(dt, elapsed);
+    if (play.game.cinematic) {
+      if (!held) cinematics.update(dt);
+      ctx.grass.update(camera.position);
+    }
+    camera.updateMatrixWorld();
+    trees.lightShadows = perf.shadows;
+    trees.update(camera);
+    modelCull.update();
+    ctx.town.update(dt, elapsed, camera);
+    const reach = ctx.cullScale || 1;
+    for (const c of ctx.cull) c.object.visible = (c.x - camera.position.x) ** 2 + (c.z - camera.position.z) ** 2 < (c.range * reach) ** 2;
+    ctx.grass.culling = perf.grass;
+    ctx.grass.cull(camera);
+    lod.update();
+    if (waterWatch) waterWatch.tick();
+    lighting.update();
+    if (look.values.dof > 0) {
+      const subject = play.game.cinematic ? null : play.game.mode === 'foot' ? play.player.state.position : play.car.position;
+      const want = subject ? Math.max(2, camera.position.distanceTo(subject)) : 14;
+      pipeline.focus += (want - pipeline.focus) * Math.min(1, dt * 5);
+    }
+    pipeline.render(dt, elapsed);
+    lod.end();
+  }
+
   function frame() {
     requestAnimationFrame(frame);
     const raw = clock.getDelta();
     const dt = Math.min(raw, 0.05);
-    fps += (1 / Math.max(raw, 0.001) - fps) * 0.05;
+    if (!benching) fps += (1 / Math.max(raw, 0.001) - fps) * 0.05;
     ctx.audio.tickMusic(Math.min(raw, 0.1));
-    renderer.info.reset();
-    if (!paused) {
+    if (!paused && !benching) {
       elapsed += dt;
-      ctx.time.value = elapsed;
-      updateFade(dt);
-      play.update(dt, elapsed);
-      if (play.game.cinematic) {
-        cinematics.update(dt);
-        ctx.grass.update(camera.position);
-      }
-      trees.update(camera.position);
-      ctx.town.update(dt, elapsed, camera);
-      for (const c of ctx.cull) c.object.visible = (c.x - camera.position.x) ** 2 + (c.z - camera.position.z) ** 2 < c.range * c.range;
-      lighting.update();
-      if (look.values.dof > 0) {
-        const subject = play.game.cinematic ? null : play.game.mode === 'foot' ? play.player.state.position : play.car.position;
-        const want = subject ? Math.max(2, camera.position.distanceTo(subject)) : 14;
-        pipeline.focus += (want - pipeline.focus) * Math.min(1, dt * 5);
-      }
-      pipeline.render(dt, elapsed);
+      renderFrame(dt);
     }
     frames++;
     if (frames === 4) {
@@ -413,8 +496,105 @@ async function boot() {
     }
   }
 
+  const gl = renderer.getContext();
+  const pixel = new Uint8Array(4);
+  const timed = (dt = 1 / 60) => {
+    const start = performance.now();
+    elapsed += dt;
+    renderFrame(dt);
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    return performance.now() - start;
+  };
+  const breathe = () => new Promise((resolve) => setTimeout(resolve, 0));
+  function lookAt(px, py, pz, tx, ty, tz, fov) {
+    play.game.cinematic = true;
+    held = true;
+    camera.position.set(px, py, pz);
+    camera.lookAt(tx, ty, tz);
+    if (fov) {
+      camera.fov = fov;
+      camera.updateProjectionMatrix();
+    }
+    pipeline.reset = true;
+  }
+  const benchApi = {
+    gpu() {
+      const info = gl.getExtension('WEBGL_debug_renderer_info');
+      return info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'unknown graphics card';
+    },
+    size: () => `${pipeline.width} x ${pipeline.height}`,
+    begin() {
+      benching = true;
+    },
+    end() {
+      benching = false;
+      held = false;
+      play.game.cinematic = false;
+      pipeline.reset = true;
+      clock.getDelta();
+    },
+    async view(v) {
+      if (!v.cam) {
+        held = false;
+        play.game.cinematic = false;
+        pipeline.reset = true;
+        return;
+      }
+      const c = v.cam.slice();
+      if (v.ground) {
+        c[1] = heightAt(c[0], c[2]) + v.ground;
+        c[4] = heightAt(c[3], c[5]) + v.ground + 1.5;
+      }
+      lookAt(...c, v.fov || 60);
+    },
+    async settle(count) {
+      for (let i = 0; i < count; i++) {
+        timed();
+        await breathe();
+      }
+    },
+    async measure(count, warm) {
+      await benchApi.settle(warm);
+      const times = [];
+      for (let i = 0; i < count; i++) {
+        times.push(timed());
+        await breathe();
+      }
+      times.sort((a, b) => a - b);
+      const cut = times.slice(2, -2);
+      return cut.reduce((a, b) => a + b, 0) / cut.length;
+    },
+  };
+  if (lookTools) {
+    perfPanel = createPerfPanel({
+      perf,
+      bench: benchApi,
+      quality: () => quality,
+      setQuality(value) {
+        hooks.quality(value);
+        screens.syncQuality(value);
+      },
+      stats: () => ({
+        fps: Math.round(fps), ms: 1000 / Math.max(fps, 0.01), width: pipeline.width, height: pipeline.height, triangles: renderer.info.render.triangles, calls: renderer.info.render.calls,
+        grassShown: ctx.grass.stats.shown, grassTiles: ctx.grass.stats.tiles, treeMeshes: trees.stats.meshes, forest: trees.stats.forest,
+        reflection: pipeline.reflectionGate(), lodReady: lod.stats.ready, lodMeshes: lod.stats.meshes, modelsHidden: modelCull.stats.hidden, models: modelCull.stats.models,
+      }),
+    }, { onClose: () => showPerf(false) });
+  }
+
   window.__dbg = {
-    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, skyline, water, play, input, ctx, screens, cinematics, soundtrack, town: ctx.town,
+    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, skyline, water, play, input, ctx, screens, cinematics, soundtrack, town: ctx.town, perf, lod, waterWatch,
+    step(dt, time) {
+      elapsed = time === undefined ? elapsed + dt : time;
+      renderFrame(dt);
+    },
+    get quality() {
+      return quality;
+    },
+    setQuality(value) {
+      hooks.quality(value);
+      screens.syncQuality(value);
+    },
     get fps() {
       return Math.round(fps);
     },
@@ -423,16 +603,15 @@ async function boot() {
     },
     looks: look,
     showLook,
+    showPerf,
+    get perfPanel() {
+      return perfPanel;
+    },
+    bench: benchApi,
     get mode() {
       return mode;
     },
-    look(px, py, pz, tx, ty, tz) {
-      play.game.cinematic = true;
-      cinematics.update = () => {};
-      camera.position.set(px, py, pz);
-      camera.lookAt(tx, ty, tz);
-      pipeline.reset = true;
-    },
+    look: lookAt,
   };
   requestAnimationFrame(frame);
 }

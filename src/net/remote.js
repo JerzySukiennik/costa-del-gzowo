@@ -117,6 +117,7 @@ export function createRemote(ctx, scene, slot) {
       if (!gone) {
         rig.group.visible = false;
         scene.add(rig.group);
+        if (ctx.lod) ctx.lod.watch(rig.group);
         rig.snap({ mode: 'foot', speed: 0, vy: 0, wade: 0 });
         character = rig;
       }

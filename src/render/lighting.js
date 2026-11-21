@@ -1,4 +1,4 @@
-// Costa del Gzowo: HDRI sky, sun with cascaded shadows, image-based lighting and the static sun depth map.
+// Costa del Gzowo: HDRI sky, sun with cascaded shadows (casters may switch to lighter shapes while the maps are drawn), image-based lighting and the static sun depth map.
 import * as THREE from 'three';
 import { CSM } from 'three/addons/csm/CSM.js';
 import { LAYERS } from '../config.js';
@@ -153,6 +153,28 @@ export async function createLighting({ renderer, scene, camera, assets }) {
 
   let sunDepth = null;
   let tick = 0;
+  let farEvery = 3;
+  let stage = null;
+  const single = [null];
+  const shadowMap = renderer.shadowMap;
+  const drawShadows = shadowMap.render;
+  shadowMap.render = function (lights, target, view) {
+    const active = stage && target === scene && this.enabled !== false && (this.autoUpdate !== false || this.needsUpdate !== false) && lights.length > 0;
+    if (!active) return drawShadows.call(this, lights, target, view);
+    for (const light of lights) {
+      const shadow = light.shadow;
+      if (!shadow || (shadow.autoUpdate === false && shadow.needsUpdate === false)) continue;
+      single[0] = light;
+      stage('shadow', true, light);
+      this.needsUpdate = true;
+      try {
+        drawShadows.call(this, single, target, view);
+      } finally {
+        stage('shadow', false, light);
+      }
+    }
+    this.needsUpdate = false;
+  };
   function buildSunDepth(center, half, size = 4096, cover = []) {
     const cam = new THREE.OrthographicCamera(-half, half, half, -half, 1, 1000);
     cam.position.copy(center).addScaledVector(sunDirection, 500);
@@ -206,7 +228,23 @@ export async function createLighting({ renderer, scene, camera, assets }) {
       tick++;
       const far = csm.lights[2].shadow;
       far.autoUpdate = false;
-      far.needsUpdate = tick % 3 === 0;
+      far.needsUpdate = tick % farEvery === 0;
+    },
+    setStage(fn) {
+      stage = fn;
+    },
+    setShadows({ size, every }) {
+      if (every) farEvery = every;
+      if (!size) return;
+      csm.shadowMapSize = size;
+      for (const light of csm.lights) {
+        if (light.shadow.mapSize.x === size) continue;
+        light.shadow.mapSize.set(size, size);
+        if (light.shadow.map) light.shadow.map.dispose();
+        light.shadow.map = null;
+        light.shadow.needsUpdate = true;
+      }
+      tick = 0;
     },
     resize() {
       csm.updateFrustums();

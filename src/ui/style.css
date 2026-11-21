@@ -35,10 +35,10 @@ html, body { margin: 0; height: 100%; background: #0b0d0c; overflow: hidden; fon
 #net { position: fixed; left: 28px; top: 62px; z-index: 12; pointer-events: none; color: rgba(246, 241, 231, 0.72); font: 600 11px/1.5 -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif; letter-spacing: 0.14em; text-transform: uppercase; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45); }
 #net b { display: block; font-weight: 600; letter-spacing: 0.02em; text-transform: none; font-size: 13px; color: #f6f1e7; }
 
-#look { position: fixed; top: 16px; right: 16px; bottom: 16px; z-index: 30; box-sizing: border-box; width: 336px; max-width: calc(100vw - 32px); padding: 16px 16px 0; overflow-y: auto; border-radius: 20px; background: rgba(16, 13, 10, 0.8); backdrop-filter: blur(22px) saturate(1.2); -webkit-backdrop-filter: blur(22px) saturate(1.2); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.09); color: #f6f1e7; font: 500 13px/1.35 -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif; }
-#look[hidden] { display: none; }
-#look h2 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
-#look h3 { margin: 18px 0 8px; font-size: 10.5px; font-weight: 650; letter-spacing: 0.18em; text-transform: uppercase; color: #f2a23a; }
+#look, #perf { position: fixed; top: 16px; right: 16px; bottom: 16px; z-index: 30; box-sizing: border-box; width: 336px; max-width: calc(100vw - 32px); padding: 16px 16px 0; overflow-y: auto; border-radius: 20px; background: rgba(16, 13, 10, 0.8); backdrop-filter: blur(22px) saturate(1.2); -webkit-backdrop-filter: blur(22px) saturate(1.2); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.09); color: #f6f1e7; font: 500 13px/1.35 -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif; }
+#look[hidden], #perf[hidden] { display: none; }
+#look h2, #perf h2 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+#look h3, #perf h3 { margin: 18px 0 8px; font-size: 10.5px; font-weight: 650; letter-spacing: 0.18em; text-transform: uppercase; color: #f2a23a; }
 .lk-head { display: grid; gap: 4px; margin-bottom: 12px; }
 .lk-hint, .lk-note { color: rgba(246, 241, 231, 0.6); font-size: 12px; }
 .lk-note { min-height: 16px; margin-top: 10px; }
@@ -52,3 +52,25 @@ html, body { margin: 0; height: 100%; background: #0b0d0c; overflow: hidden; fon
 .lk-foot { position: sticky; bottom: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 14px -16px 0; padding: 12px 16px 16px; background: rgba(16, 13, 10, 0.94); }
 .lk-main { grid-column: 1 / -1; background: #f2a23a; color: #1c1408; }
 .lk-main:hover { background: #f6b25a; }
+#perf { right: auto; left: 16px; width: 372px; }
+.pf-quality { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pf-quality .lk-chip { display: grid; gap: 2px; }
+.pf-quality small { font-size: 10px; font-weight: 600; opacity: 0.55; }
+.pf-stats { display: grid; grid-template-columns: 1fr auto; gap: 5px 12px; margin: 0; }
+.pf-stats dt { color: rgba(246, 241, 231, 0.6); }
+.pf-stats dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.pf-switch { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; margin-bottom: 10px; cursor: pointer; }
+.pf-switch input { margin: 2px 0 0; width: 16px; height: 16px; accent-color: #f2a23a; }
+.pf-switch b { display: block; font-weight: 600; }
+.pf-switch i { display: block; font-style: normal; font-size: 12px; color: rgba(246, 241, 231, 0.6); }
+.pf-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.pf-actions .lk-button:first-child { grid-column: 1 / -1; }
+#perf .lk-foot .lk-main { grid-column: auto; }
+.pf-results { margin-top: 10px; font-variant-numeric: tabular-nums; color: rgba(246, 241, 231, 0.75); }
+.pf-results table { width: 100%; border-collapse: collapse; }
+.pf-results th { text-align: left; font-size: 10.5px; font-weight: 650; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(246, 241, 231, 0.5); padding: 0 0 6px; }
+.pf-results td { padding: 4px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.pf-results td + td, .pf-results th + th { text-align: right; }
+.pf-gain { color: #f2a23a; font-weight: 650; }
+.pf-results details { margin-top: 8px; }
+.pf-results summary { cursor: pointer; color: rgba(246, 241, 231, 0.6); font-size: 12px; }

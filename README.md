@@ -58,6 +58,21 @@ Opening the game puts you in a shared world with up to three other players (a fu
 
 A tuning tool that exists only when the game runs on localhost; the public site ships the default look without it. Press O in the game (or Menu, Settings, Look editor) to open a live panel while the game keeps running. It has thirteen ready-made looks (Costa, Golden, Original, Blockbuster, Vice, Kodak 35, Postcard, Sunset, Dream, Noir, Documentary, VHS 2003, Arcade) and sliders for colour (exposure, contrast, saturation, warmth, split toning, faded blacks), lens (bloom, glare, halation, anamorphic streaks, sun flare, depth of field, vignette, colour fringes, distortion, sharpness), film (grain, cinema bars, scanlines, flicker, motion blur) and camera feel (field of view, speed rush, shake, lean into corners, distance, handheld sway, variable focal length). With variable focal length the lens goes long when you stand still and wide when you run or drive fast, and the camera moves back or in so the subject keeps its size while the background compresses or opens up. The choice is saved in the browser. "Hold to compare" shows the original look, "Copy settings" puts the current values on the clipboard. The looks live in `src/render/look.js`.
 
+## Quality and speed
+
+Four quality levels (Medium, High, Ultra, Cinematic) are defined in `src/render/quality.js` and switch live from the menu: render resolution, shadow map size, effect sample counts, tree and plant draw distances, grass reach and density, and the reflection resolution all change without a reload (only the water simulation size is taken at load). Cinematic renders at the full screen resolution (1.3x supersampling on ordinary screens), uses 4K shadow cascades that all update every frame, more ambient occlusion, fog and motion blur samples, a full-resolution reflection every frame, 512 px tree impostors and longer draw distances.
+
+Speed-ups that keep the picture, each with its own switch (`?speedups=0` starts with all of them off):
+
+- Grass is drawn in tiles; tiles outside the view or past the fade distance are skipped.
+- The mirrored scene for the water is skipped while an occlusion query reports no river pixel on screen, and uses lighter tree models when it is drawn.
+- Trees beyond 18 m cast shadows from crowns with fewer, larger leaf cards, drawn as a few instanced calls per shadow cascade; people and vehicles cast shadows from simplified triangle lists.
+- Vehicles and statues outside the view skip the main picture (their shadows and reflections stay), and heavy models switch to simplified triangle lists once the difference is under half a pixel. The lists are built in a background worker with meshoptimizer and reuse the original vertices.
+
+Trees pick their level of detail by size on screen, so a long lens no longer magnifies impostors. The far forest, which used to be impostors only, turns its nearest trees into real models, gets trunk colliders around the player, and its impostors cast shadows.
+
+A local panel (P on localhost, or Menu, Settings) has quality buttons (keys 1 to 4), the speed-up switches, a live readout (frame time, resolution, triangles, draw calls) and a benchmark that times six fixed views with the speed-ups off and on. `node Niepotrzebne/tools/bench.mjs <url> <out.json> q=ultra ab=1` runs the same views in headless Chrome and can also list triangles per pass (`counts=1`), the cost of single effects (`probe=1`) and the processor time split (`cpu=1`).
+
 ## Music
 
 Two sources, picked automatically:
@@ -69,13 +84,14 @@ Two sources, picked automatically:
 
 ## Structure
 
-- `src/render` frame pipeline (HDR opaque pass, AO, water composite, volumetric fog, TAA, motion blur, bloom, auto exposure, AgX grade), lighting, shader hooks
+- `src/render` frame pipeline (HDR opaque pass, AO, water composite, volumetric fog, TAA, motion blur, bloom, auto exposure, AgX grade), lighting, shader hooks, quality levels, simplified triangle lists, view culling for whole models
 - `src/world` heightfield, terrain, bridge and road, trees with impostor LODs, plants, grass, props, skyline
 - `src/world/town` Gzowo Springs: street plan (`layout.js`), geometry batches (`kit.js`), building parts and buildings, street furniture, materials (texture-array facades, interior-mapped windows, atlas decals), the code-drawn atlas
 - `src/water` river rendering and interaction (FFT ripples, GPU wave simulation, planar reflection, caustics, splash particles, underwater pass)
 - `src/vehicle` convertible (body, parts, interior, roof, dynamics, damage), entry choreography, vehicle registry, and `roadster/` (thruster car)
 - `src/player`, `src/camera` (chase rig and title cinematics), `src/audio` (sound mix, music, radio), `src/fx`, `src/ui` (HUD, title, pause and menu screens, radio switcher)
-- `Niepotrzebne/tools` asset fetching and model processing scripts
+- `src/dev` fixed benchmark views
+- `Niepotrzebne/tools` asset fetching and model processing scripts, screenshots and the benchmark
 
 ## Assets and licences
 

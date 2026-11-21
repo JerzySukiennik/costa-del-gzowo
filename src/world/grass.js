@@ -1,4 +1,4 @@
-// Costa del Gzowo: camera-following instanced lawn, tall meadow grass, shoreline reeds and eelgrass; blades bend as arcs in rolling wind gusts and lie down along a persistent trample map that slowly springs back.
+// Costa del Gzowo: camera-following instanced lawn, tall meadow grass, shoreline reeds and eelgrass, drawn in tiles that are skipped outside the view; blades bend as arcs in rolling wind gusts and lie down along a persistent trample map that slowly springs back.
 import * as THREE from 'three';
 import { LAYERS, WORLD } from '../config.js';
 import { rng } from './scatter.js';
@@ -6,6 +6,8 @@ import { rng } from './scatter.js';
 const BEND_RES = 384;
 const BEND_SIZE = 76.8;
 const STAMPS = 16;
+const TILES = 8;
+const BLOCK = 8;
 
 const PARS = `
 attribute vec4 aInst;
@@ -343,22 +345,70 @@ function createBendMap(renderer) {
   };
 }
 
-export function createGrass(ctx, { density = 1 } = {}) {
+function heightBlocks(heights, grid) {
+  const n = Math.ceil(grid / BLOCK);
+  const lo = new Float32Array(n * n).fill(Infinity);
+  const hi = new Float32Array(n * n).fill(-Infinity);
+  for (let j = 0; j < grid; j++) {
+    const row = Math.floor(j / BLOCK) * n;
+    for (let i = 0; i < grid; i++) {
+      const h = heights[j * grid + i];
+      const k = row + Math.floor(i / BLOCK);
+      if (h < lo[k]) lo[k] = h;
+      if (h > hi[k]) hi[k] = h;
+    }
+  }
+  return (x0, x1, z0, z1, out) => {
+    const clamp = (v) => Math.min(grid - 1, Math.max(0, v));
+    const i0 = Math.floor(clamp(Math.floor(x0 + WORLD.half) - 1) / BLOCK);
+    const i1 = Math.floor(clamp(Math.ceil(x1 + WORLD.half) + 1) / BLOCK);
+    const j0 = Math.floor(clamp(Math.floor(z0 + WORLD.half) - 1) / BLOCK);
+    const j1 = Math.floor(clamp(Math.ceil(z1 + WORLD.half) + 1) / BLOCK);
+    let a = Infinity;
+    let b = -Infinity;
+    for (let j = j0; j <= j1; j++) {
+      for (let i = i0; i <= i1; i++) {
+        const k = j * n + i;
+        if (lo[k] < a) a = lo[k];
+        if (hi[k] > b) b = hi[k];
+      }
+    }
+    out[0] = a;
+    out[1] = b;
+  };
+}
+
+export function createGrass(ctx, { density = 1, reach = 1 } = {}) {
   const { terrain, lighting, scene, renderer } = ctx;
   const grid = WORLD.half * 2 + 1;
   const heightTex = new THREE.DataTexture(terrain.heights, grid, grid, THREE.RedFormat, THREE.FloatType);
   heightTex.minFilter = heightTex.magFilter = THREE.LinearFilter;
   heightTex.needsUpdate = true;
+  const heightRange = heightBlocks(terrain.heights, grid);
   const bend = createBendMap(renderer);
+  const group = new THREE.Group();
+  group.name = 'grass';
+  scene.add(group);
   const shared = {
     uCam: { value: new THREE.Vector3() }, uPushA: { value: new THREE.Vector4(0, -100, 0, 1) }, uPushB: { value: new THREE.Vector4(0, -100, 0, 1) },
     tShadow: { value: null }, uShadowMatrix: { value: new THREE.Matrix4() }, uShadowOn: { value: 0 }, uCarInv: { value: new THREE.Matrix4().makeTranslation(0, -1000, 0) }, uBody: { value: new THREE.Vector4(0, -1000, 0, 0.3) },
     tBend: { value: bend.texture }, uBendCenter: { value: bend.center }, uWindDir: { value: new THREE.Vector2(0.8, 0.6) },
   };
 
+  function place(geo, material) {
+    const mesh = new THREE.Mesh(geo, material);
+    mesh.frustumCulled = false;
+    mesh.receiveShadow = true;
+    mesh.castShadow = false;
+    mesh.layers.set(LAYERS.DETAIL);
+    mesh.matrixAutoUpdate = false;
+    group.add(mesh);
+    return mesh;
+  }
+
   function layer({ span, step, blades, width, segments, spread, heights, channel, wind, base, tip, dry, seed, seedHeads = 0, seedColor = [0.62, 0.5, 0.26] }) {
     const geo = clumpGeometry(blades, width, segments, spread, seed, seedHeads);
-    const n = Math.floor(span / step);
+    const n = Math.floor((span * reach) / step);
     const random = rng(seed * 7 + 1);
     const inst = new Float32Array(n * n * 4);
     for (let j = 0; j < n; j++) {
@@ -386,27 +436,121 @@ export function createGrass(ctx, { density = 1 } = {}) {
         uCarInv: shared.uCarInv, uBody: shared.uBody,
       },
     });
-    const mesh = new THREE.Mesh(geo, material);
-    mesh.frustumCulled = false;
-    mesh.receiveShadow = true;
-    mesh.castShadow = false;
-    mesh.layers.set(LAYERS.DETAIL);
-    mesh.matrixAutoUpdate = false;
-    scene.add(mesh);
-    return mesh;
+    const whole = place(geo, material);
+    const edge = (t) => Math.ceil((t * n) / TILES);
+    const tiles = [];
+    for (let tz = 0; tz < TILES; tz++) {
+      for (let tx = 0; tx < TILES; tx++) {
+        const i0 = edge(tx);
+        const i1 = edge(tx + 1);
+        const j0 = edge(tz);
+        const j1 = edge(tz + 1);
+        const part = new Float32Array((i1 - i0) * (j1 - j0) * 4);
+        let k = 0;
+        for (let j = j0; j < j1; j++) {
+          part.set(inst.subarray((j * n + i0) * 4, (j * n + i1) * 4), k);
+          k += (i1 - i0) * 4;
+        }
+        const tile = new THREE.InstancedBufferGeometry();
+        tile.setAttribute('position', geo.attributes.position);
+        tile.setAttribute('normal', geo.attributes.normal);
+        tile.setAttribute('aBlade', geo.attributes.aBlade);
+        tile.setIndex(geo.index);
+        tile.setAttribute('aInst', new THREE.InstancedBufferAttribute(part, 4));
+        tile.instanceCount = part.length / 4;
+        const mesh = place(tile, material);
+        mesh.visible = false;
+        tiles.push({ mesh, x0: i0 * step, x1: i1 * step, z0: j0 * step, z1: j1 * step });
+      }
+    }
+    return { whole, tiles, material, size: n * step, reach: spread + 0.35 + heights[1] * 1.15, top: heights[1] * 1.15 + 0.1, clump: geo.index.count / 3 };
   }
 
-  const k = Math.sqrt(density);
-  const meshes = [
-    layer({ span: 84, step: 0.27 / k, blades: 5, width: 0.05, segments: 3, spread: 0.17, heights: [0.14, 0.46], channel: 0, wind: 0.55, base: [0.07, 0.13, 0.035], tip: [0.21, 0.33, 0.08], dry: [0.4, 0.37, 0.17], seed: 3 }),
-    layer({ span: 120, step: 0.62 / k, blades: 6, width: 0.045, segments: 4, spread: 0.28, heights: [0.9, 1.9], channel: 1, wind: 0.5, base: [0.045, 0.085, 0.02], tip: [0.24, 0.36, 0.09], dry: [0.5, 0.43, 0.2], seed: 5, seedHeads: 0.25, seedColor: [0.36, 0.25, 0.14] }),
-    layer({ span: 100, step: 0.75 / k, blades: 5, width: 0.07, segments: 3, spread: 0.24, heights: [0.5, 1.3], channel: 2, wind: 1, base: [0.015, 0.05, 0.02], tip: [0.07, 0.2, 0.05], dry: [0.12, 0.2, 0.06], seed: 8 }),
-    layer({ span: 96, step: 0.4 / k, blades: 7, width: 0.03, segments: 4, spread: 0.3, heights: [0.6, 1.2], channel: 3, wind: 0.75, base: [0.055, 0.11, 0.03], tip: [0.27, 0.36, 0.1], dry: [0.52, 0.45, 0.2], seed: 13, seedHeads: 0.24, seedColor: [0.62, 0.5, 0.27] }),
-  ];
+  const build = (amount) => {
+    const k = Math.sqrt(amount);
+    return [
+      layer({ span: 84, step: 0.27 / k, blades: 5, width: 0.05, segments: 3, spread: 0.17, heights: [0.14, 0.46], channel: 0, wind: 0.55, base: [0.07, 0.13, 0.035], tip: [0.21, 0.33, 0.08], dry: [0.4, 0.37, 0.17], seed: 3 }),
+      layer({ span: 120, step: 0.62 / k, blades: 6, width: 0.045, segments: 4, spread: 0.28, heights: [0.9, 1.9], channel: 1, wind: 0.5, base: [0.045, 0.085, 0.02], tip: [0.24, 0.36, 0.09], dry: [0.5, 0.43, 0.2], seed: 5, seedHeads: 0.25, seedColor: [0.36, 0.25, 0.14] }),
+      layer({ span: 100, step: 0.75 / k, blades: 5, width: 0.07, segments: 3, spread: 0.24, heights: [0.5, 1.3], channel: 2, wind: 1, base: [0.015, 0.05, 0.02], tip: [0.07, 0.2, 0.05], dry: [0.12, 0.2, 0.06], seed: 8 }),
+      layer({ span: 96, step: 0.4 / k, blades: 7, width: 0.03, segments: 4, spread: 0.3, heights: [0.6, 1.2], channel: 3, wind: 0.75, base: [0.055, 0.11, 0.03], tip: [0.27, 0.36, 0.1], dry: [0.52, 0.45, 0.2], seed: 13, seedHeads: 0.24, seedColor: [0.62, 0.5, 0.27] }),
+    ];
+  };
+  let layers = build(density);
+  let culling = true;
   let last = ctx.time.value;
+  const stats = { tiles: 0, shown: 0, triangles: 0, all: 0 };
+  const frustum = new THREE.Frustum();
+  const proj = new THREE.Matrix4();
+  const box = new THREE.Box3();
+  const range = [0, 0];
+  const spanX = [0, 0, 0, 0];
+  const spanZ = [0, 0, 0, 0];
+
+  function wrap(a, b, origin, size, out) {
+    const start = (((a - origin) % size) + size) % size;
+    const length = b - a;
+    if (start + length <= size) {
+      out[0] = origin + start;
+      out[1] = origin + start + length;
+      return 1;
+    }
+    out[0] = origin + start;
+    out[1] = origin + size;
+    out[2] = origin;
+    out[3] = origin + start + length - size;
+    return 2;
+  }
+
+  function seen(tile, L, cx, cz) {
+    const nx = wrap(tile.x0, tile.x1, cx - L.size / 2, L.size, spanX);
+    const nz = wrap(tile.z0, tile.z1, cz - L.size / 2, L.size, spanZ);
+    const limit = L.size * 0.485 + 0.05;
+    for (let a = 0; a < nx; a++) {
+      const x0 = spanX[a * 2];
+      const x1 = spanX[a * 2 + 1];
+      const dx = Math.max(x0 - cx, 0, cx - x1);
+      for (let b = 0; b < nz; b++) {
+        const z0 = spanZ[b * 2];
+        const z1 = spanZ[b * 2 + 1];
+        const dz = Math.max(z0 - cz, 0, cz - z1);
+        if (dx * dx + dz * dz > limit * limit) continue;
+        heightRange(x0 - L.reach, x1 + L.reach, z0 - L.reach, z1 + L.reach, range);
+        box.min.set(x0 - L.reach, range[0] - 0.3, z0 - L.reach);
+        box.max.set(x1 + L.reach, range[1] + L.top, z1 + L.reach);
+        if (frustum.intersectsBox(box)) return true;
+      }
+    }
+    return false;
+  }
 
   return {
-    meshes,
+    group,
+    stats,
+    get meshes() {
+      return layers.map((L) => L.whole);
+    },
+    get culling() {
+      return culling;
+    },
+    set culling(on) {
+      culling = !!on;
+    },
+    get density() {
+      return density;
+    },
+    setDetail(amount, far = 1) {
+      if (amount === density && far === reach) return;
+      density = amount;
+      reach = far;
+      for (const L of layers) {
+        for (const mesh of [L.whole, ...L.tiles.map((t) => t.mesh)]) {
+          group.remove(mesh);
+          mesh.geometry.dispose();
+        }
+        L.material.dispose();
+      }
+      layers = build(density);
+    },
     setShadow(texture, matrix) {
       shared.tShadow.value = texture;
       shared.uShadowMatrix.value.copy(matrix);
@@ -414,6 +558,29 @@ export function createGrass(ctx, { density = 1 } = {}) {
     },
     press(stamp) {
       bend.press(stamp);
+    },
+    cull(camera) {
+      stats.tiles = stats.shown = stats.triangles = stats.all = 0;
+      if (culling) {
+        camera.updateMatrixWorld();
+        frustum.setFromProjectionMatrix(proj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+      }
+      const cx = shared.uCam.value.x;
+      const cz = shared.uCam.value.z;
+      for (const L of layers) {
+        L.whole.visible = !culling;
+        stats.all += L.whole.geometry.instanceCount * L.clump;
+        for (const tile of L.tiles) {
+          const on = culling && seen(tile, L, cx, cz);
+          tile.mesh.visible = on;
+          stats.tiles++;
+          if (on) {
+            stats.shown++;
+            stats.triangles += tile.mesh.geometry.instanceCount * L.clump;
+          }
+        }
+      }
+      if (!culling) stats.triangles = stats.all;
     },
     update(camera, pushA, pushB, carMatrixWorld, body) {
       shared.uCam.value.copy(camera);

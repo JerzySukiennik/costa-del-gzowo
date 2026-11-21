@@ -48,7 +48,7 @@ void main() {
   float r2 = uRadius * uRadius;
   float bias = 0.012 + 0.0025 * dist;
   float sum = 0.0;
-  const int COUNT = 12;
+  const int COUNT = AO_COUNT;
   for (int i = 0; i < COUNT; i++) {
     float a = (float(i) + 0.5) / float(COUNT);
     float ang = (a * 5.0 + noise) * 6.2831853;
@@ -119,7 +119,7 @@ void main() {
   vec3 dir = ray / dist;
   if (d >= 0.999999) dist = 700.0;
   float marchDist = min(dist, uMaxDist);
-  const int STEPS = 14;
+  const int STEPS = FOG_STEPS;
   float stepLen = marchDist / float(STEPS);
   float jitter = ign(gl_FragCoord.xy + uFrame * 5.588238);
   float cosT = dot(dir, uSunDir);
@@ -256,8 +256,8 @@ void main() {
   float jitter = ign(gl_FragCoord.xy) - 0.5;
   vec3 sum = c.rgb;
   float wsum = 1.0;
-  for (int i = 1; i <= 7; i++) {
-    vec2 uv = vUv + vel * ((float(i) + jitter) / 7.0 - 0.5);
+  for (int i = 1; i <= BLUR_TAPS; i++) {
+    vec2 uv = vUv + vel * ((float(i) + jitter) / float(BLUR_TAPS) - 0.5);
     vec4 s = texture(tColor, uv);
     float w = step(0.5, s.a);
     sum += min(s.rgb, vec3(48.0)) * w;
@@ -459,6 +459,9 @@ export class Pipeline {
     this.time = 0;
     this.reset = true;
     this.settings = { ao: true, fog: true, taa: true, bloom: true, motion: true, scale: 1 };
+    this.reflectionGate = null;
+    this.stage = null;
+    this.skipped = 0;
     this.exposure = 0.56;
     this.sunOcclusion = 1;
     this.fade = 1;
@@ -475,14 +478,14 @@ export class Pipeline {
     const m4 = () => ({ value: new THREE.Matrix4() });
     const tex = () => ({ value: null });
 
-    this.aoMat = mat(AO_FRAG, { tDepth: tex(), uProjInv: m4(), uTexel: v2(), uRadius: { value: 1.25 }, uIntensity: { value: 1.35 }, uFrame: { value: 0 }, uProjScale: { value: 500 } });
+    this.aoMat = mat(AO_FRAG, { tDepth: tex(), uProjInv: m4(), uTexel: v2(), uRadius: { value: 1.25 }, uIntensity: { value: 1.35 }, uFrame: { value: 0 }, uProjScale: { value: 500 } }, { defines: { AO_COUNT: 12 } });
     this.compositeMat = mat(COMPOSITE_FRAG, { tColor: tex(), tDepth: tex(), tAO: tex(), uTexel: v2(), uAOEnabled: { value: 1 } }, { depthTest: true, depthWrite: true, depthFunc: THREE.AlwaysDepth });
     this.fogMat = mat(FOG_FRAG, {
       tColor: tex(), tDepth: tex(), tShadow: tex(), uInvViewProj: m4(), uShadowMatrix: m4(),
       uCamPos: { value: new THREE.Vector3() }, uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSunColor: { value: new THREE.Color(1, 1, 1) },
       uSkyColor: { value: new THREE.Color(0.19, 0.2, 0.24) }, uDensity: { value: 0.00095 }, uFalloff: { value: 0.035 }, uBaseY: { value: 0 },
       uAniso: { value: 0.78 }, uFrame: { value: 0 }, uShadowOn: { value: 0 }, uMaxDist: { value: 240 },
-    });
+    }, { defines: { FOG_STEPS: 14 } });
     this.taaMat = mat(TAA_FRAG, { tCurrent: tex(), tHistory: tex(), tDepth: tex(), uInvViewProj: m4(), uPrevViewProj: m4(), uTexel: v2(), uReset: { value: 1 } });
     this.downMat = mat(BLOOM_DOWN_FRAG, { tSrc: tex(), uTexel: v2(), uFirst: { value: 0 } });
     this.upMat = mat(BLOOM_UP_FRAG, { tSrc: tex(), uTexel: v2() }, { blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor, blendEquation: THREE.AddEquation });
@@ -496,7 +499,7 @@ export class Pipeline {
     });
     this.look = null;
     this.focus = 8;
-    this.motionMat = mat(MOTION_FRAG, { tColor: tex(), tDepth: tex(), uInvViewProj: m4(), uPrevViewProj: m4(), uStrength: { value: 0.5 } });
+    this.motionMat = mat(MOTION_FRAG, { tColor: tex(), tDepth: tex(), uInvViewProj: m4(), uPrevViewProj: m4(), uStrength: { value: 0.5 } }, { defines: { BLUR_TAPS: 7 } });
     this.adaptMat = mat(ADAPT_FRAG, { tSmall: tex(), tPrev: tex(), uRate: { value: 0.05 }, uReset: { value: 1 } });
     this.sunWorld = new THREE.Vector3(0, 1, 0);
     this.sunClip = new THREE.Vector4();
@@ -509,6 +512,17 @@ export class Pipeline {
     this.targets = null;
     this.width = 0;
     this.height = 0;
+  }
+
+  setSamples({ ao, fog, blur }) {
+    const set = (material, key, value) => {
+      if (material.defines[key] === value) return;
+      material.defines[key] = value;
+      material.needsUpdate = true;
+    };
+    set(this.aoMat, 'AO_COUNT', ao);
+    set(this.fogMat, 'FOG_STEPS', fog);
+    set(this.motionMat, 'BLUR_TAPS', blur);
   }
 
   setSunShadow(depthTexture, matrix) {
@@ -574,7 +588,12 @@ export class Pipeline {
     if (water) {
       water.update(dt, elapsed, camera);
       camera.layers.set(LAYERS.WORLD);
-      water.renderReflection(renderer, scene, camera);
+      if (this.reflectionGate && !this.reflectionGate()) this.skipped++;
+      else {
+        if (this.stage) this.stage('reflection', true);
+        water.renderReflection(renderer, scene, camera);
+        if (this.stage) this.stage('reflection', false);
+      }
     }
 
     if (this.settings.taa) {
