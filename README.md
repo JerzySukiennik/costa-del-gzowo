@@ -40,6 +40,8 @@ The menu (M) has an Avatar tab and a Garage tab.
 
 Roadster keys: Space lifts off and climbs while held (gently at first, faster the longer you hold, up to about 450 m), releasing it holds the altitude, C descends to a soft landing or to a hover just above water. In the air W flies forward, S brakes to a stop (and backs up if held), A / D turn and the car flies where its nose points, Shift boosts, I / K pitch, J / L roll. G toggles flight assist (off: Space is raw thrust and nothing holds the car up). On the ground Shift boosts and Shift + S brakes with the front nozzles. In the Roadster the handbrake is X and the camera distance is V.
 
+Helicopter keys: sitting down starts the turbine and the rotor needs about seven seconds to come up to speed. Space climbs, releasing it holds the altitude, C descends and slows down near the ground for a soft landing (over water it stops in a low hover). W flies forward, S brakes and then backs up, A / D turn (a pedal turn in the hover, a banked turn at speed), Shift flies fast, H is the landing light. Without input the helicopter slows to a hover by itself, and at speed it climbs over rising ground. V changes the camera distance.
+
 ## Music
 
 Two sources, picked automatically:
@@ -68,5 +70,6 @@ Two sources, picked automatically:
 - Radio station covers: two generated images and thirteen drawn by `Niepotrzebne/tools/make_covers.py`.
 - The convertible, the default character, bridge, palms and water are generated in code.
 - Roadster model and vapour flipbook: from Jurek's own Roadster 88 and Roadster Jump projects. Thruster sounds from [freesound.org](https://freesound.org), all CC0: thrust loop by kkenny101 (861613); thrust start and big boost by Singular_Estudio (136462), Astounded (477846) and mcpable (131934); thrust stop by mcpable (131934); valve puff by meisterleise (547447, 547448); flap servo by derjuli (824121).
+- Kestrel helicopter: generated in code. Its sounds are recordings from [freesound.org](https://freesound.org), all CC0, listed in `assets/vehicles/heli/audio/CREDITS.md`.
 - Jurek avatar: body, clothes and head are Jurek's own Avatar project.
 - `assets/music-public/`: the Costa del Gzowo soundtrack, four original tracks generated for the game with Google's Lyria 3 Pro music model (they carry its SynthID watermark).

@@ -34,7 +34,7 @@ export function createHud() {
         speed.textContent = kmh;
         lastSpeed = kmh;
       }
-      gear.textContent = state.stalled ? 'STALLED' : state.reverse ? 'R' : 'D' + state.gear;
+      gear.textContent = state.readout ? state.readout : state.stalled ? 'STALLED' : state.reverse ? 'R' : 'D' + state.gear;
       rpm.style.width = `${Math.min(100, (state.rpm / 7200) * 100)}%`;
     },
     place(name) {

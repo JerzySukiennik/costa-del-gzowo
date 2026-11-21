@@ -188,6 +188,7 @@ export async function createAudio(ctx) {
 
   const api = {
     context: ac,
+    master,
     start() {
       if (started) return;
       started = true;

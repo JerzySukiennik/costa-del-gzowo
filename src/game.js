@@ -186,7 +186,7 @@ export async function createGame(ctx) {
           if (damage.repair) damage.repair();
         }
       }
-      if (input.hit('KeyT')) {
+      if (input.hit('KeyT') && !carModel.fixedRoof) {
         carModel.toggleRoof();
         if (audio) audio.roof();
       }
@@ -242,9 +242,9 @@ export async function createGame(ctx) {
     }
 
     exitHint = Math.max(0, exitHint - dt);
-    if (nearDoor) hud.prompt('F', 'Enter car');
+    if (nearDoor) hud.prompt('F', car.label || 'Enter car');
     else if (inCar && car.state.stalled) hud.prompt('R', damage.state.exploded ? 'Car wrecked, get a new one' : 'Engine flooded, reset car');
-    else if (inCar && exitHint > 0 && car.state.speed < 1) hud.prompt('F', car.keys ? 'Exit   ·   Space up   ·   C down   ·   Shift boost   ·   Q E radio' : 'Exit   ·   Q E radio   ·   T roof   ·   H lights');
+    else if (inCar && exitHint > 0 && car.state.speed < 1) hud.prompt('F', car.hint ? car.hint : car.keys ? 'Exit   ·   Space up   ·   C down   ·   Shift boost   ·   Q E radio' : 'Exit   ·   Q E radio   ·   T roof   ·   H lights');
     else hud.prompt('', '');
     hud.drive(game.mode === 'car', car.state);
     hud.note(damage.state.note);

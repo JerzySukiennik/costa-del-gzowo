@@ -81,6 +81,7 @@ export function createCameraRig({ camera, physics }) {
     } else {
       const s = car.state;
       const f = car.forward;
+      const view = car.camera || null;
       const speed = s.speed;
       tmp.copy(f);
       if (speed > 6 && car.velocity.dot(f) > 0) tmp.lerp(dir.copy(car.velocity).normalize(), 0.45);
@@ -96,12 +97,13 @@ export function createCameraRig({ camera, physics }) {
       } else rig.orbitIdle += dt;
       if (rig.orbitIdle > 1.6) {
         rig.orbit = Math.atan2(Math.sin(rig.orbit), Math.cos(rig.orbit)) * (1 - Math.min(1, dt * 2.2));
-        rig.pitch += (0.2 - rig.pitch) * Math.min(1, dt * 1.5);
+        rig.pitch += ((view ? view.pitch : 0.2) - rig.pitch) * Math.min(1, dt * 1.5);
       }
       const yaw = rig.carYaw + rig.orbit;
       const pitch = Math.max(rig.pitch, 0.06);
-      const dist = (6.1 + Math.min(1.6, speed * 0.035)) * rig.zoom;
-      pivot.copy(car.position).addScaledVector(car.up, 1.15);
+      const dist = ((view ? view.distance : 6.1) + Math.min(view ? 4 : 1.6, speed * (view ? 0.07 : 0.035))) * rig.zoom;
+      if (view) pivot.copy(car.position).setY(car.position.y + view.height);
+      else pivot.copy(car.position).addScaledVector(car.up, 1.15);
       if (!initialized) pivotSmooth.copy(pivot);
       const k = 1 - Math.exp(-16 * dt);
       pivotSmooth.lerp(pivot, k);
@@ -109,7 +111,7 @@ export function createCameraRig({ camera, physics }) {
       const free = avoid(pivotSmooth, desired, GROUPS.WORLD);
       currentDist += (Math.min(free, dist) - currentDist) * Math.min(1, dt * (free < currentDist ? 30 : 3));
       desired.sub(pivotSmooth).normalize().multiplyScalar(currentDist).add(pivotSmooth);
-      look.copy(pivotSmooth).addScaledVector(f, 1.6);
+      look.copy(pivotSmooth).addScaledVector(f, view ? view.ahead : 1.6);
       look.y += 0.15;
       fov = 55 + Math.min(1, speed / 55) * 15;
       rig.trauma = Math.max(rig.trauma, Math.min(0.25, (s.skid || 0) * 0.08 + (s.onGround > 0 && car.wheels.some((w) => w.surf.loose > 0.4) ? Math.min(0.1, speed * 0.004) : 0)));
