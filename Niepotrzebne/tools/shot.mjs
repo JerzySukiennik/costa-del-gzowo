@@ -1,6 +1,6 @@
 // Costa del Gzowo: headless Chrome (real GPU via ANGLE/Metal) screenshots with console capture.
 // node shot.mjs <url> <outPrefix> [steps.json | inline setup JS] [waitMs] [width] [height]
-// steps.json: [{ "js": "...", "wait": 1500, "shot": "name" }, ...]; each step evaluates js, waits, then saves <outPrefix>-<name>.png.
+// steps.json: [{ "size": [w, h], "js": "...", "wait": 1500, "shot": "name" }, ...]; each step optionally resizes the viewport, evaluates js, waits, then saves <outPrefix>-<name>.png.
 import { createRequire } from 'node:module';
 import { readFileSync, existsSync } from 'node:fs';
 const require = createRequire('/Users/jurek/openclaw/node_modules/');
@@ -25,6 +25,7 @@ try {
 }
 const steps = setup && existsSync(setup) ? JSON.parse(readFileSync(setup, 'utf8')) : [{ js: setup, wait: +wait, shot: '' }];
 for (const step of steps) {
+  if (step.size) await page.setViewportSize({ width: step.size[0], height: step.size[1] });
   if (step.js) {
     try {
       const r = await page.evaluate(step.js);
@@ -34,7 +35,7 @@ for (const step of steps) {
     }
   }
   await page.waitForTimeout(step.wait ?? +wait);
-  if (step.shot !== undefined) await page.screenshot({ path: step.shot ? `${out}-${step.shot}.png` : `${out}.png` });
+  if (step.shot !== undefined) await page.screenshot({ path: step.shot ? `${out}-${step.shot}.png` : `${out}.png`, timeout: 120000 });
 }
 console.log(logs.slice(-80).join('\n'));
 await browser.close();
