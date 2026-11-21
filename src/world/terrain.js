@@ -1,7 +1,8 @@
 // Costa del Gzowo: terrain chunks, baked splat maps, layered PBR ground shader and the physics heightfield.
 import * as THREE from 'three';
-import { BRIDGE, ROAD, WORLD } from '../config.js';
-import { heightAt, trackInfo, fbm, smooth, clamp } from './heightfield.js';
+import { BRIDGE, ROAD, TOWN, WORLD } from '../config.js';
+import { heightAt, trackInfo, townDistance, fbm, smooth, clamp } from './heightfield.js';
+import { inYard } from './town/layout.js';
 
 export const GROUND = { GRASS: 0, FOREST: 1, MUD: 2, PEBBLES: 3, SAND: 4, GRAVEL: 5, DIRT: 6, ROCK: 7 };
 const LAYER_NAMES = ['leafy_grass', 'forrest_ground_01', 'brown_mud_leaves_01', 'ganges_river_pebbles', 'coast_sand_01', 'gravel_floor_02', 'gravel_road', 'seaside_rock'];
@@ -9,7 +10,7 @@ const LAYER_SCALE = [0.31, 0.3, 0.33, 0.47, 0.36, 0.52, 0.33, 0.24];
 const LAYER_TINT = [[0.5, 0.74, 0.34], [0.62, 0.74, 0.46], [0.8, 0.76, 0.66], [1.0, 0.97, 0.9], [1.12, 1.06, 0.92], [0.6, 0.58, 0.54], [0.78, 0.7, 0.6], [0.85, 0.85, 0.85]];
 const SIZE = WORLD.half * 2;
 const GRID = SIZE + 1;
-const SPLAT = 1024;
+const SPLAT = Math.round(SIZE / 0.625);
 const LAYER_RES = 1024;
 
 function buildHeights() {
@@ -77,7 +78,7 @@ function bakeSplat(heights) {
         for (const g of [GROUND.GRASS, GROUND.FOREST, GROUND.MUD]) w[g] *= 1 - k;
       }
       let hard = 0;
-      if (ax > BRIDGE.halfLength - 2) {
+      if (ax > BRIDGE.halfLength - 2 && x < TOWN.x1 && x > -WORLD.core - 30) {
         const edge = az - ROAD.halfWidth + (n2 - 0.5) * 0.9;
         hard = Math.max(hard, 1 - smooth(0.4, 2.9, edge));
       }
@@ -94,6 +95,18 @@ function bakeSplat(heights) {
       for (let k = 0; k < 8; k++) w[k] *= keep;
       w[GROUND.GRAVEL] += hard * 1.2;
       w[GROUND.DIRT] += track * 1.2;
+      let town = 0;
+      if (x > TOWN.x0 - 40) {
+        town = 1 - smooth(-2, 6, townDistance(x, z) + (n2 - 0.5) * 4);
+        const yard = town > 0 && inYard(x, z) ? 1 - smooth(0.3, 0.7, n2 * 0.6 + n1 * 0.5) * 0.4 : 0;
+        const bare = town * (1 - yard);
+        for (let k = 0; k < 8; k++) w[k] *= 1 - town;
+        w[GROUND.GRAVEL] += bare * (0.5 + 0.8 * n1);
+        w[GROUND.DIRT] += bare * (0.4 + 0.8 * (1 - n1));
+        w[GROUND.GRASS] += town * yard * 1.4;
+        w[GROUND.DIRT] += town * yard * 0.25 * smooth(0.5, 0.8, n2);
+        town = bare;
+      }
       let sum = 0;
       for (let k = 0; k < 8; k++) sum += w[k];
       if (sum < 0.0001) {
@@ -106,8 +119,8 @@ function bakeSplat(heights) {
         b[o + k] = Math.round((w[k + 4] / sum) * 255);
       }
       const grassy = (w[GROUND.GRASS] + w[GROUND.FOREST] * 0.35) / sum;
-      veg[o] = Math.round(clamp(grassy * (0.55 + 0.9 * n2), 0, 1) * 255);
-      veg[o + 1] = Math.round(clamp(smooth(-0.32, -0.05, h) * (1 - smooth(0.25, 0.7, h)) * smooth(0.46, 0.62, n1) * (1 - hard) * (1 - track) * 1.4, 0, 1) * 255);
+      veg[o] = Math.round(clamp(grassy * (0.55 + 0.9 * n2) * (1 - town), 0, 1) * 255);
+      veg[o + 1] = Math.round(clamp(smooth(-0.32, -0.05, h) * (1 - smooth(0.25, 0.7, h)) * smooth(0.46, 0.62, n1) * (1 - hard) * (1 - track) * (1 - town) * 1.4, 0, 1) * 255);
       veg[o + 2] = Math.round(forest * bank * keep * 255);
       veg[o + 3] = Math.round(clamp(h * 12 + 128, 0, 255));
     }
@@ -278,63 +291,81 @@ export async function createTerrain({ assets, lighting, physics, scene }) {
 
   const group = new THREE.Group();
   group.name = 'terrain';
-  const CHUNK = 64;
-  const perSide = SIZE / CHUNK;
-  const side = CHUNK + 1;
-  const index = new Uint32Array(CHUNK * CHUNK * 6);
-  let q = 0;
-  for (let j = 0; j < CHUNK; j++) {
-    for (let i = 0; i < CHUNK; i++) {
-      const v = j * side + i;
-      index[q++] = v;
-      index[q++] = v + side;
-      index[q++] = v + 1;
-      index[q++] = v + 1;
-      index[q++] = v + side;
-      index[q++] = v + side + 1;
+  const rects = [];
+  const core = WORLD.core;
+  for (let z = -core; z < core; z += 64) for (let x = -core; x < core; x += 64) rects.push([x, z, 64, 64]);
+  const ring = WORLD.half - core;
+  if (ring > 0) {
+    const across = Math.ceil(SIZE / 128);
+    const wide = SIZE / across;
+    for (let k = 0; k < across; k++) {
+      rects.push([-WORLD.half + k * wide, -WORLD.half, wide, ring]);
+      rects.push([-WORLD.half + k * wide, core, wide, ring]);
+    }
+    for (let z = -core; z < core; z += 128) {
+      rects.push([-WORLD.half, z, ring, 128]);
+      rects.push([core, z, ring, 128]);
     }
   }
-  const sharedIndex = new THREE.BufferAttribute(index, 1);
-  const hAt = (i, j) => heights[clamp(j, 0, SIZE) * GRID + clamp(i, 0, SIZE)];
-  for (let cz = 0; cz < perSide; cz++) {
-    for (let cx = 0; cx < perSide; cx++) {
-      const pos = new Float32Array(side * side * 3);
-      const nor = new Float32Array(side * side * 3);
-      let minY = Infinity;
-      let maxY = -Infinity;
-      for (let j = 0; j < side; j++) {
-        for (let i = 0; i < side; i++) {
-          const gi = cx * CHUNK + i;
-          const gj = cz * CHUNK + j;
-          const o = (j * side + i) * 3;
-          const y = hAt(gi, gj);
-          pos[o] = gi - WORLD.half;
-          pos[o + 1] = y;
-          pos[o + 2] = gj - WORLD.half;
-          const nx = hAt(gi - 1, gj) - hAt(gi + 1, gj);
-          const nz = hAt(gi, gj - 1) - hAt(gi, gj + 1);
-          const inv = 1 / Math.hypot(nx, 2, nz);
-          nor[o] = nx * inv;
-          nor[o + 1] = 2 * inv;
-          nor[o + 2] = nz * inv;
-          minY = Math.min(minY, y);
-          maxY = Math.max(maxY, y);
-        }
+  const indexCache = new Map();
+  const indexFor = (cw, ch) => {
+    const key = cw + 'x' + ch;
+    if (indexCache.has(key)) return indexCache.get(key);
+    const index = new Uint32Array(cw * ch * 6);
+    let q = 0;
+    for (let j = 0; j < ch; j++) {
+      for (let i = 0; i < cw; i++) {
+        const v = j * (cw + 1) + i;
+        index[q++] = v;
+        index[q++] = v + cw + 1;
+        index[q++] = v + 1;
+        index[q++] = v + 1;
+        index[q++] = v + cw + 1;
+        index[q++] = v + cw + 2;
       }
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
-      geo.setIndex(sharedIndex);
-      const x0 = cx * CHUNK - WORLD.half;
-      const z0 = cz * CHUNK - WORLD.half;
-      geo.boundingBox = new THREE.Box3(new THREE.Vector3(x0, minY, z0), new THREE.Vector3(x0 + CHUNK, maxY, z0 + CHUNK));
-      geo.boundingSphere = geo.boundingBox.getBoundingSphere(new THREE.Sphere());
-      const mesh = new THREE.Mesh(geo, material);
-      mesh.receiveShadow = true;
-      mesh.castShadow = false;
-      mesh.matrixAutoUpdate = false;
-      group.add(mesh);
     }
+    const attr = new THREE.BufferAttribute(index, 1);
+    indexCache.set(key, attr);
+    return attr;
+  };
+  const hAt = (i, j) => heights[clamp(j, 0, SIZE) * GRID + clamp(i, 0, SIZE)];
+  for (const [x0, z0, cw, ch] of rects) {
+    const gi0 = x0 + WORLD.half;
+    const gj0 = z0 + WORLD.half;
+    const pos = new Float32Array((cw + 1) * (ch + 1) * 3);
+    const nor = new Float32Array((cw + 1) * (ch + 1) * 3);
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (let j = 0; j <= ch; j++) {
+      for (let i = 0; i <= cw; i++) {
+        const gi = gi0 + i;
+        const gj = gj0 + j;
+        const o = (j * (cw + 1) + i) * 3;
+        const y = hAt(gi, gj);
+        pos[o] = gi - WORLD.half;
+        pos[o + 1] = y;
+        pos[o + 2] = gj - WORLD.half;
+        const nx = hAt(gi - 1, gj) - hAt(gi + 1, gj);
+        const nz = hAt(gi, gj - 1) - hAt(gi, gj + 1);
+        const inv = 1 / Math.hypot(nx, 2, nz);
+        nor[o] = nx * inv;
+        nor[o + 1] = 2 * inv;
+        nor[o + 2] = nz * inv;
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    geo.setIndex(indexFor(cw, ch));
+    geo.boundingBox = new THREE.Box3(new THREE.Vector3(x0, minY, z0), new THREE.Vector3(x0 + cw, maxY, z0 + ch));
+    geo.boundingSphere = geo.boundingBox.getBoundingSphere(new THREE.Sphere());
+    const mesh = new THREE.Mesh(geo, material);
+    mesh.receiveShadow = true;
+    mesh.castShadow = false;
+    mesh.matrixAutoUpdate = false;
+    group.add(mesh);
   }
   scene.add(group);
 

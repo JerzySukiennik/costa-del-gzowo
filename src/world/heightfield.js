@@ -1,5 +1,5 @@
 // Costa del Gzowo: analytic terrain height and river flow, shared by terrain mesh, physics, vegetation and water.
-import { BRIDGE, ROAD, WORLD } from '../config.js';
+import { BRIDGE, ROAD, TOWN, WORLD } from '../config.js';
 
 export const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 export const smooth = (a, b, x) => {
@@ -121,6 +121,10 @@ function rectDistance(x, z, r) {
   return Math.hypot(dx, dz);
 }
 
+export function townDistance(x, z) {
+  return rectDistance(x, z, TOWN);
+}
+
 export function heightAt(x, z) {
   let y = natural(x, z);
   const ax = Math.abs(x);
@@ -132,7 +136,7 @@ export function heightAt(x, z) {
   const fill = grade - dist * 0.52 - 2.9 * smooth(0, 0.8, dEnd);
   if (y < fill) y = fill;
   if (dEnd === 0) {
-    const cut = grade + dist * 0.5;
+    const cut = grade + dist * 0.5 + 40 * smooth(TOWN.x1 - 5, TOWN.x1 + 45, x) + 40 * smooth(WORLD.core + 10, WORLD.core + 60, -x);
     if (y > cut) y = cut;
   }
   const pull = rectDistance(x, z, ROAD.pullOff);
@@ -146,6 +150,10 @@ export function heightAt(x, z) {
     const target = base + tr.yOffset;
     const rut = Math.cos(clamp(tr.dist / tr.halfWidth, 0, 1) * Math.PI * 2) * -0.025;
     y = mix(target + rut, y, smooth(tr.halfWidth, tr.halfWidth + 6, tr.dist));
+  }
+  if (x > TOWN.x0 - 60) {
+    const d = rectDistance(x, z, TOWN);
+    if (d < 40) y = mix(TOWN.ground, y, smooth(3, 40, d + (fbm(x * 0.05, z * 0.05, 2) - 0.5) * 8));
   }
   return y;
 }

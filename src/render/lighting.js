@@ -153,14 +153,22 @@ export async function createLighting({ renderer, scene, camera, assets }) {
 
   let sunDepth = null;
   let tick = 0;
-  function buildSunDepth(center, half, size = 4096) {
+  function buildSunDepth(center, half, size = 4096, cover = []) {
     const cam = new THREE.OrthographicCamera(-half, half, half, -half, 1, 1000);
     cam.position.copy(center).addScaledVector(sunDirection, 500);
     cam.lookAt(center);
     cam.layers.set(LAYERS.WORLD);
     cam.updateMatrixWorld();
-    const target = new THREE.WebGLRenderTarget(size, size, { format: THREE.RedFormat, type: THREE.UnsignedByteType, depthBuffer: true, generateMipmaps: false });
-    target.depthTexture = new THREE.DepthTexture(size, size, THREE.UnsignedIntType);
+    const local = new THREE.Vector3();
+    for (const p of cover) {
+      local.copy(p).applyMatrix4(cam.matrixWorldInverse);
+      cam.left = Math.min(cam.left, Math.floor(local.x));
+      cam.right = Math.max(cam.right, Math.ceil(local.x));
+    }
+    cam.updateProjectionMatrix();
+    const width = Math.round((size * (cam.right - cam.left)) / (2 * half));
+    const target = new THREE.WebGLRenderTarget(width, size, { format: THREE.RedFormat, type: THREE.UnsignedByteType, depthBuffer: true, generateMipmaps: false });
+    target.depthTexture = new THREE.DepthTexture(width, size, THREE.UnsignedIntType);
     target.depthTexture.minFilter = target.depthTexture.magFilter = THREE.NearestFilter;
     const background = scene.background;
     const environment = scene.environment;
