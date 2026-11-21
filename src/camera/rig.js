@@ -7,7 +7,8 @@ import { heightAt } from '../world/heightfield.js';
 export function createCameraRig({ camera, physics }) {
   const R = physics.RAPIER;
   const rig = { yaw: 2.2, pitch: 0.2, distance: 3.6, mode: 'foot', trauma: 0, blend: 1, carYaw: 0, orbit: 0, orbitIdle: 9, fov: 55, far: 0, zoom: 1, turn: 0, roll: 0 };
-  let feel = { fov: 55, speedFov: 1, shake: 1, roll: 0, distance: 1, handheld: 0 };
+  let feel = { fov: 55, speedFov: 1, shake: 1, roll: 0, distance: 1, handheld: 0, focal: 0 };
+  const half = (degrees) => Math.tan(THREE.MathUtils.degToRad(degrees) / 2);
   const pivot = new THREE.Vector3();
   const pivotSmooth = new THREE.Vector3();
   const desired = new THREE.Vector3();
@@ -56,6 +57,9 @@ export function createCameraRig({ camera, physics }) {
     time += dt;
     const mouse = input.mouse;
     let fov = 55;
+    const focal = feel.focal || 0;
+    const tele = Math.max(24, feel.fov - 30 * focal);
+    const dolly = 1 + (half(feel.fov) / half(rig.fov) - 1) * Math.min(1, focal);
     if (rig.mode === 'foot') {
       rig.yaw -= mouse.dx * 0.0026;
       rig.pitch = THREE.MathUtils.clamp(rig.pitch + mouse.dy * 0.0022, -0.55, 1.25);
@@ -72,14 +76,14 @@ export function createCameraRig({ camera, physics }) {
       pivotSmooth.z += (pivot.z - pivotSmooth.z) * kh;
       pivotSmooth.y += (pivot.y - pivotSmooth.y) * kv;
       const pitch = rig.pitch + rig.far * 0.28;
-      const dist = rig.distance * feel.distance * (1 + rig.far * 0.5) * (player.state.speed > 4.5 ? 1.08 : 1);
+      const dist = rig.distance * feel.distance * dolly * (1 + rig.far * 0.5) * (player.state.speed > 4.5 ? 1.08 : 1);
       rig.turn = 0;
       desired.set(pivotSmooth.x - sy * Math.cos(pitch) * dist, pivotSmooth.y + Math.sin(pitch) * dist, pivotSmooth.z - cy * Math.cos(pitch) * dist);
       const free = avoid(pivotSmooth, desired, GROUPS.WORLD | GROUPS.CAR);
       currentDist += (Math.min(free, dist) - currentDist) * Math.min(1, dt * (free < currentDist ? 30 : 4));
       desired.sub(pivotSmooth).normalize().multiplyScalar(currentDist).add(pivotSmooth);
       look.copy(pivotSmooth);
-      fov = feel.fov + rig.far * 6;
+      fov = tele + (feel.fov - tele) * Math.max(rig.far, THREE.MathUtils.smoothstep(player.state.speed, 0.4, 6)) + rig.far * 6;
     } else {
       const s = car.state;
       const f = car.forward;
@@ -104,7 +108,7 @@ export function createCameraRig({ camera, physics }) {
       }
       const yaw = rig.carYaw + rig.orbit;
       const pitch = Math.max(rig.pitch, 0.06);
-      const dist = ((view ? view.distance : 6.1) + Math.min(view ? 4 : 1.6, speed * (view ? 0.07 : 0.035))) * rig.zoom * feel.distance;
+      const dist = ((view ? view.distance : 6.1) + Math.min(view ? 4 : 1.6, speed * (view ? 0.07 : 0.035))) * rig.zoom * feel.distance * dolly;
       if (view) pivot.copy(car.position).setY(car.position.y + view.height);
       else pivot.copy(car.position).addScaledVector(car.up, 1.15);
       if (!initialized) pivotSmooth.copy(pivot);
@@ -116,7 +120,8 @@ export function createCameraRig({ camera, physics }) {
       desired.sub(pivotSmooth).normalize().multiplyScalar(currentDist).add(pivotSmooth);
       look.copy(pivotSmooth).addScaledVector(f, view ? view.ahead : 1.6);
       look.y += 0.15;
-      fov = feel.fov + Math.min(1, speed / 55) * 15 * feel.speedFov;
+      const wide = feel.fov + Math.min(1, speed / 55) * 15 * feel.speedFov;
+      fov = focal > 0 ? tele + (wide - tele) * THREE.MathUtils.smoothstep(speed, 1, 27) : wide;
       rig.trauma = Math.max(rig.trauma, Math.min(0.25, (s.skid || 0) * 0.08 + (s.onGround > 0 && car.wheels.some((w) => w.surf.loose > 0.4) ? Math.min(0.1, speed * 0.004) : 0)));
     }
     const ground = heightAt(desired.x, desired.z);
@@ -156,7 +161,7 @@ export function createCameraRig({ camera, physics }) {
       camera.position.copy(desired);
       camera.quaternion.copy(toQuat);
     }
-    rig.fov += (fov - rig.fov) * Math.min(1, dt * 4);
+    rig.fov += (fov - rig.fov) * Math.min(1, dt * (focal > 0 ? 1.9 : 4));
     if (Math.abs(camera.fov - rig.fov) > 0.01) {
       camera.fov = rig.fov;
       camera.updateProjectionMatrix();

@@ -4,14 +4,15 @@ export const ORIGINAL = {
   shadowTint: [-0.02, 0.008, 0.036], highlightTint: [0.036, 0.014, -0.032],
   bloom: 0.065, glare: 0.08, halation: 0, streak: 0, vignette: 0.2, aberration: 0.0035, distortion: 0, sharpen: 0.55, flare: 1, dof: 0,
   grain: 0.018, grainSize: 1, letterbox: 0, scanlines: 0, flicker: 0, motionBlur: 1,
-  fov: 55, speedFov: 1, shake: 1, roll: 0, distance: 1, handheld: 0,
+  fov: 55, speedFov: 1, shake: 1, roll: 0, distance: 1, handheld: 0, focal: 0,
 };
 
 const TEAL = [-0.045, 0.015, 0.05];
 const ORANGE = [0.06, 0.02, -0.05];
 
 export const LOOKS = [
-  { id: 'costa', name: 'Costa', note: 'Richer golden hour, the new default', set: { contrast: 1.27, saturation: 1.34, vibrance: 0.4, split: 1.4, matte: 0.018, bloom: 0.075, glare: 0.11, halation: 0.28, vignette: 0.26, sharpen: 0.62, grain: 0.022, roll: 0.25, handheld: 0.12 } },
+  { id: 'costa', name: 'Costa', note: 'Vivid and sharp, with a lens that goes long when you slow down and wide when you speed up', set: { exposure: 0.69, contrast: 1.49, saturation: 1.65, vibrance: 0.6, temperature: 0.08, split: 0, olive: 0.39, matte: 0.028, vignette: 0.07, aberration: 0, distortion: 0.045, sharpen: 1.2, flare: 2.5, grain: 0, motionBlur: 1.2, fov: 71, speedFov: 1.05, shake: 1.45, distance: 1.15, handheld: 1.14, focal: 1 } },
+  { id: 'golden', name: 'Golden', note: 'Richer golden hour', set: { contrast: 1.27, saturation: 1.34, vibrance: 0.4, split: 1.4, matte: 0.018, bloom: 0.075, glare: 0.11, halation: 0.28, vignette: 0.26, sharpen: 0.62, grain: 0.022, roll: 0.25, handheld: 0.12 } },
   { id: 'original', name: 'Original', note: 'The look up to v1.5', set: {} },
   { id: 'blockbuster', name: 'Blockbuster', note: 'Teal and orange, wide bars, long lens', set: { contrast: 1.36, saturation: 1.18, split: 1.8, shadowTint: TEAL, highlightTint: ORANGE, bloom: 0.09, streak: 0.7, vignette: 0.3, dof: 0.55, grain: 0.02, letterbox: 2.39, fov: 48, shake: 1.2, roll: 0.5 } },
   { id: 'vice', name: 'Vice', note: 'Pink and violet neon nights', set: { contrast: 1.3, saturation: 1.5, vibrance: 0.5, temperature: -0.1, tint: -0.3, split: 2.2, shadowTint: [-0.01, -0.02, 0.07], highlightTint: [0.07, -0.01, 0.03], bloom: 0.12, glare: 0.2, halation: 0.6, aberration: 0.009, vignette: 0.3, grain: 0.04, fov: 60 } },
@@ -29,10 +30,10 @@ export const GROUPS = [
   { name: 'Colour', items: [['exposure', 'Exposure', 0.3, 1, 0.01], ['contrast', 'Contrast', 0.9, 1.7, 0.01], ['saturation', 'Saturation', 0, 2, 0.01], ['vibrance', 'Vibrance', 0, 1, 0.01], ['temperature', 'Warmth', -1, 1, 0.01], ['tint', 'Green or magenta', -1, 1, 0.01], ['split', 'Shadow and highlight tint', 0, 3, 0.05], ['olive', 'Olive greens', 0, 0.6, 0.01], ['matte', 'Faded blacks', 0, 0.15, 0.002]] },
   { name: 'Lens', items: [['bloom', 'Bloom', 0, 0.25, 0.005], ['glare', 'Glare', 0, 0.4, 0.01], ['halation', 'Halation', 0, 1.2, 0.02], ['streak', 'Anamorphic streaks', 0, 1.5, 0.02], ['flare', 'Sun flare', 0, 2.5, 0.05], ['dof', 'Depth of field', 0, 1, 0.01], ['vignette', 'Vignette', 0, 0.8, 0.01], ['aberration', 'Colour fringes', 0, 0.03, 0.0005], ['distortion', 'Lens distortion', -0.2, 0.2, 0.005], ['sharpen', 'Sharpness', 0, 1.2, 0.01]] },
   { name: 'Film', items: [['grain', 'Grain', 0, 0.12, 0.002], ['grainSize', 'Grain size', 1, 3, 0.1], ['letterbox', 'Cinema bars', 0, 2.76, 0.01], ['scanlines', 'Scanlines', 0, 1, 0.02], ['flicker', 'Flicker', 0, 1, 0.02], ['motionBlur', 'Motion blur', 0, 2, 0.05]] },
-  { name: 'Camera', items: [['fov', 'Field of view', 38, 80, 0.5], ['speedFov', 'Speed rush', 0, 2.5, 0.05], ['shake', 'Shake', 0, 2.5, 0.05], ['roll', 'Lean into corners', 0, 1.5, 0.05], ['distance', 'Camera distance', 0.6, 1.6, 0.01], ['handheld', 'Handheld sway', 0, 1.5, 0.02]] },
+  { name: 'Camera', items: [['fov', 'Field of view', 38, 80, 0.5], ['speedFov', 'Speed rush', 0, 2.5, 0.05], ['shake', 'Shake', 0, 2.5, 0.05], ['roll', 'Lean into corners', 0, 1.5, 0.05], ['distance', 'Camera distance', 0.6, 1.6, 0.01], ['handheld', 'Handheld sway', 0, 1.5, 0.02], ['focal', 'Variable focal length', 0, 1.5, 0.05]] },
 ];
 
-const KEY = 'costa-look';
+const KEY = 'costa-look-2';
 
 export function createLook(onChange) {
   const values = {};
