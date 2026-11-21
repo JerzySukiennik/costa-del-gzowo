@@ -451,7 +451,7 @@ export async function createTrees(ctx) {
   ];
   const outside = (x, z) => Math.abs(x) > WORLD.core - 6 || Math.abs(z) > WORLD.core - 6;
   const ringSpots = pickPoints({
-    count: Math.round(4200 * ((WORLD.half - 6) ** 2 - (WORLD.core - 6) ** 2) / ((WORLD.core - 6) ** 2 - 430 * 400)), seed: 92, spacing: 5, attempts: 14,
+    count: Math.round((4200 * 4 * ((WORLD.half - 6) ** 2 - (WORLD.core - 6) ** 2)) / (4 * (WORLD.core - 6) ** 2 - 430 * 400)), seed: 92, spacing: 5, attempts: 14,
     accept: (x, z) => {
       if (!outside(x, z) || townDistance(x, z) < 10) return 0;
       const h = heightAt(x, z);
@@ -506,5 +506,5 @@ export async function createTrees(ctx) {
   }
 
   scene.add(group);
-  return { group, heroSpots, update, forceMeshes };
+  return { group, heroSpots, update, forceMeshes, palms: { kinds: palmKinds, trunkMat, frondMat } };
 }

@@ -125,6 +125,7 @@ async function boot() {
   const ctx = { renderer, scene, camera, assets, lighting, physics, terrain, input, quality, avatar, car, time: { value: 0 }, cull: [] };
   status('Growing trees');
   const trees = await createTrees(ctx);
+  ctx.trees = trees;
   await nextFrame();
   status('Scattering plants and rocks');
   const plants = await createPlants(ctx);

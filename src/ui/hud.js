@@ -11,6 +11,7 @@ export function createHud() {
   const place = el('place');
 
   let lastPrompt = '';
+  let placeTimer = 0;
   let lastSpeed = -1;
   return {
     show() {
@@ -35,6 +36,13 @@ export function createHud() {
       }
       gear.textContent = state.stalled ? 'STALLED' : state.reverse ? 'R' : 'D' + state.gear;
       rpm.style.width = `${Math.min(100, (state.rpm / 7200) * 100)}%`;
+    },
+    place(name) {
+      if (place.textContent === name) return;
+      place.textContent = name;
+      place.classList.add('on');
+      clearTimeout(placeTimer);
+      placeTimer = setTimeout(() => place.classList.remove('on'), 5000);
     },
     note(text) {
       if (note.textContent !== text) note.textContent = text;

@@ -1,6 +1,8 @@
 // Costa del Gzowo: town geometry kit (batched surfaces, window glass and decals with per-vertex material data and frame transforms).
 import * as THREE from 'three';
 
+export const CHANNELS = { ON: 0, FLICKER: 1, BLINK: 2, MAIN_G: 3, MAIN_Y: 4, MAIN_R: 5, CROSS_G: 6, CROSS_Y: 7, CROSS_R: 8, WALK: 9, DONT: 10, CHASE_A: 11, CHASE_B: 12, FLICKER_B: 13, LAMP: 14, BROKEN: 15 };
+
 export const L = { PLASTER: 0, PBRICK: 1, BRICK: 2, TILE: 3, PLANK: 4, IRON: 5, SHUTTER: 6, CONCRETE: 7, PAVER: 8, ASPHALT: 9, FLAT: 10, GRAVEL: 11, STRIPES: 12, BARBER: 13 };
 
 const _v = new THREE.Vector3();
@@ -285,22 +287,22 @@ export class Decals extends Base {
     this.glow = [];
   }
 
-  put(item, u0, v0, u1, v1, z = 0.012, { glow = 0, channel = 0, flip = false, fade = 1 } = {}) {
+  put(item, u0, v0, u1, v1, z = 0.012, { glow = 0, channel = 0, flip = false, fade = 1, sway = 0 } = {}) {
     if (!item) return this;
     const [a, b, c, d] = item.uv;
     const ua = flip ? c : a;
     const ub = flip ? a : c;
-    const corners = [[u0, v0, ua, b], [u1, v0, ub, b], [u1, v1, ub, d], [u0, v1, ua, d]];
+    const corners = [[u0, v0, ua, b, 1], [u1, v0, ub, b, 1], [u1, v1, ub, d, 0], [u0, v1, ua, d, 0]];
     for (const idx of [0, 1, 2, 0, 2, 3]) {
       const k = corners[idx];
       this.vert(k[0], k[1], z, 0, 0, 1);
       this.uv.push(k[2], k[3]);
-      this.glow.push(glow, channel, fade, 0);
+      this.glow.push(glow, channel, fade, sway * k[4]);
     }
     return this;
   }
 
-  quad(item, pts, { glow = 0, channel = 0, fade = 1, uv = null } = {}) {
+  quad(item, pts, { glow = 0, channel = 0, fade = 1, uv = null, sway = null } = {}) {
     if (!item) return this;
     const [a, b, c, d] = item.uv;
     const r = uv || [0, 0, 1, 1];
@@ -313,7 +315,7 @@ export class Decals extends Base {
       const q = pts[idx];
       this.vert(q[0], q[1], q[2], n.x, n.y, n.z);
       this.uv.push(uvs[idx][0], uvs[idx][1]);
-      this.glow.push(glow, channel, fade, 0);
+      this.glow.push(glow, channel, fade, sway ? sway[idx] : 0);
     }
     return this;
   }

@@ -1,5 +1,6 @@
 // Costa del Gzowo menu screens: title, pause, settings, controls and the map, avatar and garage menu.
-import { ROAD } from '../config.js';
+import { ROAD, TOWN, WORLD } from '../config.js';
+import { MAIN, CROSS, ALLEYS, LOTS, PLOTS, PLAZA } from '../world/town/layout.js';
 import { heightAt } from '../world/heightfield.js';
 
 const INK = '#f6f1e7';
@@ -533,14 +534,15 @@ export function createScreens(options = {}) {
 
   function buildBase() {
     const size = 512;
-    const cell = 640 / size;
+    const span = WORLD.half * 2;
+    const cell = span / size;
     const c = document.createElement('canvas');
     c.width = size;
     c.height = size;
     const g = c.getContext('2d');
     const h = new Float32Array(size * size);
     for (let j = 0; j < size; j++) {
-      for (let i = 0; i < size; i++) h[j * size + i] = heightAt(-320 + (i + 0.5) * cell, -320 + (j + 0.5) * cell);
+      for (let i = 0; i < size; i++) h[j * size + i] = heightAt(-WORLD.half + (i + 0.5) * cell, -WORLD.half + (j + 0.5) * cell);
     }
     const img = g.createImageData(size, size);
     const d = img.data;
@@ -579,7 +581,7 @@ export function createScreens(options = {}) {
       }
     }
     g.putImageData(img, 0, 0);
-    g.setTransform(0.8, 0, 0, 0.8, 256, 256);
+    g.setTransform(size / span, 0, 0, size / span, size / 2, size / 2);
     g.fillStyle = 'rgba(190,176,140,0.9)';
     g.fillRect(ROAD.pullOff.x0, ROAD.pullOff.z0, ROAD.pullOff.x1 - ROAD.pullOff.x0, ROAD.pullOff.z1 - ROAD.pullOff.z0);
     g.fillStyle = '#3a3e41';
@@ -593,12 +595,43 @@ export function createScreens(options = {}) {
     g.strokeStyle = 'rgba(246,241,231,0.55)';
     g.lineWidth = 0.9;
     g.strokeRect(-48, -6.3, 96, 12.6);
-    for (const x of [-238, 238]) {
+    for (const x of [-238]) {
       g.fillStyle = INK;
       g.fillRect(x - 1.5, -6.5, 3, 13);
       g.fillStyle = '#1b1e20';
       for (let z = -6.5; z < 6.5; z += 4) g.fillRect(x - 1.5, z, 3, 2);
     }
+    g.fillStyle = 'rgba(150,140,120,0.55)';
+    g.fillRect(TOWN.x0 + 4, TOWN.z0 + 4, TOWN.x1 - TOWN.x0 - 8, TOWN.z1 - TOWN.z0 - 8);
+    g.fillStyle = '#3a3e41';
+    g.fillRect(MAIN.x0, -MAIN.half, MAIN.x1 - MAIN.x0, MAIN.half * 2);
+    for (const c of CROSS) g.fillRect(c.x - c.half, c.z0, c.half * 2, c.z1 - c.z0);
+    for (const a of ALLEYS) g.fillRect(a.x0, a.z - a.half, a.x1 - a.x0, a.half * 2);
+    g.fillStyle = '#4a4e51';
+    for (const l of LOTS) g.fillRect(l.x0, l.z0, l.x1 - l.x0, l.z1 - l.z0);
+    g.fillStyle = 'rgba(214,170,120,0.9)';
+    g.fillRect(PLAZA.x0, PLAZA.z0, PLAZA.x1 - PLAZA.x0, PLAZA.z1 - PLAZA.z0);
+    g.fillStyle = '#e9dcc4';
+    g.strokeStyle = 'rgba(30,30,30,0.6)';
+    g.lineWidth = 0.6;
+    for (const p of PLOTS) {
+      g.fillRect(p.x0, p.z0, p.x1 - p.x0, p.z1 - p.z0);
+      g.strokeRect(p.x0, p.z0, p.x1 - p.x0, p.z1 - p.z0);
+    }
+    g.globalAlpha = 0.9;
+    g.fillStyle = AMBER;
+    g.fillRect(MAIN.x0, -0.3, MAIN.x1 - MAIN.x0, 0.6);
+    g.globalAlpha = 1;
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.font = '600 9px "Helvetica Neue", Arial, sans-serif';
+    g.textAlign = 'center';
+    g.fillStyle = INK;
+    g.shadowColor = 'rgba(0,0,0,0.8)';
+    g.shadowBlur = 3;
+    const tx = (x) => size / 2 + (x * size) / span;
+    g.fillText('GZOWO SPRINGS', tx((TOWN.x0 + TOWN.x1) / 2), tx(TOWN.z1) + 12);
+    g.restore();
     return c;
   }
 
@@ -649,8 +682,8 @@ export function createScreens(options = {}) {
     if (!data) return;
     if (!base) base = buildBase();
     const S = canvas.width;
-    const k = S / 640;
-    const px = (v) => (v + 320) * k;
+    const k = S / (WORLD.half * 2);
+    const px = (v) => (v + WORLD.half) * k;
     mapCtx.setTransform(1, 0, 0, 1, 0, 0);
     mapCtx.clearRect(0, 0, S, S);
     mapCtx.drawImage(base, 0, 0, S, S);

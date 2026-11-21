@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { LAYERS, TOWN } from '../../config.js';
 import { rng } from '../scatter.js';
-import { Surface, Glass, Decals } from './kit.js';
+import { Surface, Glass, Decals, CHANNELS } from './kit.js';
 import { createAtlas } from './atlas.js';
 import { createTownMaterials } from './materials.js';
 import { buildStreets } from './streets.js';
@@ -11,8 +11,6 @@ import { buildFurniture } from './furniture.js';
 import { inTown } from './layout.js';
 
 const CELL_X = [256, 300, 346, 380, 420];
-
-export const CHANNELS = { ON: 0, FLICKER: 1, BLINK: 2, MAIN_G: 3, MAIN_Y: 4, MAIN_R: 5, CROSS_G: 6, CROSS_Y: 7, CROSS_R: 8, WALK: 9, DONT: 10, CHASE_A: 11, CHASE_B: 12, FLICKER_B: 13, LAMP: 14, BROKEN: 15 };
 
 export async function createTown(ctx) {
   const { scene, physics } = ctx;
@@ -30,7 +28,10 @@ export async function createTown(ctx) {
   }
 
   const T = {
-    ctx, physics, atlas, random, cell, items: atlas.items,
+    ctx, physics, atlas, random, cell, items: atlas.items, mats,
+    collider(desc, surface = 'metal') {
+      return physics.tag(physics.world.createCollider(desc), surface);
+    },
     box(x0, x1, y0, y1, z0, z1, surface = 'concrete') {
       physics.staticBox(Math.min(x0, x1), Math.max(x0, x1), y0, y1, Math.min(z0, z1), Math.max(z0, z1), surface);
     },

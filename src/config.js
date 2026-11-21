@@ -41,10 +41,10 @@ export const WORLD = {
 
 export const TOWN = {
   name: 'Gzowo Springs',
-  x0: 258,
-  x1: 412,
-  z0: -68,
-  z1: 68,
+  x0: 256,
+  x1: 414,
+  z0: -71,
+  z1: 71,
   ground: 4.28,
   street: 4.4,
   walk: 4.44,

@@ -1432,10 +1432,100 @@ export function createAtlas() {
     centered(g, 'from this very square.', w / 2, h * 0.56, `${h * 0.075}px ${SERIF}`, '#f4e2b0');
     centered(g, 'It landed in the river.', w / 2, h * 0.7, `italic ${h * 0.075}px ${SERIF}`, '#f4e2b0');
   });
-  add('letters_hill', 1024, 128, (g, w, h) => {
-    g.fillStyle = '#f2efe6';
+  add('flag_town', 384, 256, (g, w, h) => {
+    g.fillStyle = '#1aa39a';
     g.fillRect(0, 0, w, h);
+    g.fillStyle = '#ff8a3d';
+    g.fillRect(0, h * 0.66, w, h * 0.34);
+    g.fillStyle = '#ffe9a8';
+    g.beginPath();
+    g.arc(w * 0.5, h * 0.66, h * 0.26, Math.PI, 0);
+    g.fill();
+    rocket(g, w * 0.5, h * 0.45, h / 280, '#ffffff', '#ff5d3a', false);
+    centered(g, 'GZOWO SPRINGS', w / 2, h * 0.86, `900 ${h * 0.1}px ${FUTURA}`, '#ffffff');
   }, { noise: 4 });
+  add('pump_face', 192, 384, (g, w, h) => {
+    g.fillStyle = '#eef2f4';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#0f5ea8';
+    g.fillRect(0, 0, w, h * 0.2);
+    centered(g, 'GAS & GO', w / 2, h * 0.1, `900 ${w * 0.16}px ${BLACK}`, '#ffd21f');
+    g.fillStyle = '#111';
+    g.fillRect(w * 0.12, h * 0.26, w * 0.76, h * 0.2);
+    centered(g, '00.00', w / 2, h * 0.36, `bold ${w * 0.2}px "Courier New", monospace`, '#7dff8f');
+    ['87', '89', '93'].forEach((n, i) => {
+      g.fillStyle = ['#2a8a2a', '#e0a020', '#c03030'][i];
+      g.fillRect(w * (0.12 + i * 0.27), h * 0.55, w * 0.22, h * 0.12);
+      centered(g, n, w * (0.23 + i * 0.27), h * 0.61, `bold ${w * 0.11}px ${SANS}`, '#fff');
+    });
+    g.fillStyle = '#333';
+    g.fillRect(w * 0.3, h * 0.75, w * 0.4, h * 0.12);
+    weather(g, w, h, random, { fade: 0.05, spots: 6 });
+  });
+  add('news_red', 128, 192, (g, w, h) => {
+    g.fillStyle = '#c8322c';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#f2efe6';
+    g.fillRect(w * 0.1, h * 0.12, w * 0.8, h * 0.46);
+    centered(g, 'GZOWO', w / 2, h * 0.22, `900 ${w * 0.17}px ${SERIF}`, '#111');
+    centered(g, 'GAZETTE', w / 2, h * 0.32, `bold ${w * 0.13}px ${SERIF}`, '#111');
+    g.fillStyle = '#555';
+    for (let i = 0; i < 6; i++) g.fillRect(w * 0.16, h * (0.38 + i * 0.03), w * 0.68, 2);
+    weather(g, w, h, random, { fade: 0.06, spots: 5 });
+  });
+  add('news_blue', 128, 192, (g, w, h) => {
+    g.fillStyle = '#1764a8';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#f2efe6';
+    g.fillRect(w * 0.1, h * 0.12, w * 0.8, h * 0.46);
+    centered(g, 'FREE', w / 2, h * 0.22, `900 ${w * 0.2}px ${SANS}`, '#c8322c');
+    centered(g, 'RENT GUIDE', w / 2, h * 0.34, `bold ${w * 0.11}px ${SANS}`, '#111');
+    weather(g, w, h, random, { fade: 0.06, spots: 5 });
+  });
+  add('news_yellow', 128, 192, (g, w, h) => {
+    g.fillStyle = '#f2c230';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#f2efe6';
+    g.fillRect(w * 0.1, h * 0.12, w * 0.8, h * 0.46);
+    centered(g, 'SAWGRASS', w / 2, h * 0.22, `900 ${w * 0.13}px ${SANS}`, '#111');
+    centered(g, 'WEEKLY', w / 2, h * 0.33, `bold ${w * 0.13}px ${SANS}`, '#111');
+    weather(g, w, h, random, { fade: 0.06, spots: 5 });
+  });
+  add('walk', 128, 128, (g, w, h) => {
+    g.fillStyle = '#111';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#f2f2ea';
+    g.beginPath();
+    g.arc(w * 0.5, h * 0.2, w * 0.08, 0, Math.PI * 2);
+    g.fill();
+    g.lineWidth = w * 0.09;
+    g.lineCap = 'round';
+    g.strokeStyle = '#f2f2ea';
+    g.beginPath();
+    g.moveTo(w * 0.5, h * 0.32);
+    g.lineTo(w * 0.48, h * 0.58);
+    g.lineTo(w * 0.36, h * 0.85);
+    g.moveTo(w * 0.48, h * 0.58);
+    g.lineTo(w * 0.62, h * 0.85);
+    g.moveTo(w * 0.5, h * 0.38);
+    g.lineTo(w * 0.34, h * 0.52);
+    g.moveTo(w * 0.5, h * 0.38);
+    g.lineTo(w * 0.66, h * 0.5);
+    g.stroke();
+  }, { noise: 0 });
+  add('dont', 128, 128, (g, w, h) => {
+    g.fillStyle = '#111';
+    g.fillRect(0, 0, w, h);
+    g.fillStyle = '#ff7a1a';
+    g.beginPath();
+    g.roundRect(w * 0.3, h * 0.35, w * 0.4, h * 0.45, w * 0.08);
+    g.fill();
+    for (let i = 0; i < 4; i++) {
+      g.beginPath();
+      g.roundRect(w * (0.3 + i * 0.1), h * 0.15, w * 0.08, h * 0.3, w * 0.04);
+      g.fill();
+    }
+  }, { noise: 0 });
 
   flush();
   const texture = new THREE.CanvasTexture(canvas);

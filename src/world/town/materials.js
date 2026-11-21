@@ -84,6 +84,7 @@ attribute vec2 aUv;
 attribute vec3 aCol;
 attribute vec4 aMat;
 attribute vec4 aExt;
+attribute vec3 aTint;
 uniform float uTime;
 uniform vec2 uWind;
 varying vec2 vTUv;
@@ -95,6 +96,7 @@ const SURF_VERTEX = `
 {
   vTUv = aUv;
   vCol = aCol;
+  if (aTint.r + aTint.g + aTint.b > 0.0 && aCol.r > 0.99 && aCol.g < 0.01 && aCol.b > 0.99) vCol = aTint;
   vMat = aMat;
   vExt = aExt;
   if (aExt.z > 0.0) {
@@ -212,9 +214,10 @@ vec3 pastel(float s) {
   return vec3(0.7, 0.62, 0.74);
 }
 vec3 interior(vec2 o, vec2 size, vec3 d, vec3 sunL, float depth, float seed, float kind, float lit) {
-  float sill = kind > 0.5 && kind < 1.5 ? 0.25 : 0.95;
-  float roomH = kind > 0.5 && kind < 1.5 ? max(size.y + 0.6, 3.4) : 2.9;
-  float mx = kind > 0.5 && kind < 1.5 ? 0.2 : 0.9;
+  bool shop = kind > 0.5 && abs(kind - 2.0) > 0.5;
+  float sill = shop ? 0.0 : 0.95;
+  float roomH = shop ? max(size.y + 0.4, 3.4) : 2.9;
+  float mx = shop ? 0.2 : 0.9;
   vec3 lo = vec3(-mx, -sill, 0.0);
   vec3 hi = vec3(size.x + mx, roomH - sill, depth);
   vec3 p0 = vec3(o, 0.0);
@@ -231,7 +234,25 @@ vec3 interior(vec2 o, vec2 size, vec3 d, vec3 sunL, float depth, float seed, flo
     face = 0.0;
     c = wall;
     float bx = p.x / max(size.x + 2.0 * mx, 0.1);
-    if (kind > 0.5 && kind < 1.5) {
+    if (kind > 3.5 && kind < 4.5) {
+      float cell = floor(p.x / 0.75);
+      float lx = fract(p.x / 0.75) * 0.75 - 0.375;
+      float body = step(p.y, 1.0) * step(0.1, p.y);
+      float ly = p.y - 0.55;
+      float doorR = length(vec2(lx, ly));
+      c = mix(c, vec3(0.92, 0.92, 0.9), body);
+      c = mix(c, vec3(0.2, 0.24, 0.3), body * step(doorR, 0.24));
+      c = mix(c, vec3(0.75, 0.82, 0.9), body * step(doorR, 0.19) * step(0.5, hsh(cell + seed * 30.0)));
+      float upper = step(1.2, p.y) * step(p.y, 2.1);
+      c = mix(c, vec3(0.88, 0.88, 0.86), upper);
+      c = mix(c, vec3(0.2, 0.24, 0.3), upper * step(length(vec2(lx, p.y - 1.65)), 0.22));
+    } else if (kind > 4.5) {
+      float tile = mod(floor(p.x / 0.2) + floor(p.y / 0.2), 2.0);
+      c = mix(vec3(0.92, 0.9, 0.85), vec3(0.15, 0.15, 0.15), tile * step(p.y, 1.2));
+      c = mix(c, vec3(0.75, 0.15, 0.12), step(1.2, p.y) * step(p.y, 1.35));
+      float pie = step(abs(p.x - size.x * 0.5), 0.8) * step(1.6, p.y) * step(p.y, 2.2);
+      c = mix(c, vec3(0.95, 0.85, 0.6), pie);
+    } else if (shop) {
       float shelf = step(0.0, p.y + sill - 0.3) * step(p.y + sill, 2.2);
       float row = fract((p.y + sill) / 0.45);
       float item = hsh(floor(p.x / 0.22) + floor((p.y + sill) / 0.45) * 7.0 + seed * 91.0);
@@ -260,6 +281,18 @@ vec3 interior(vec2 o, vec2 size, vec3 d, vec3 sunL, float depth, float seed, flo
   } else {
     face = 3.0;
     c = wall * 0.86;
+  }
+  if (shop) {
+    float zc = depth * 0.42;
+    float tc = (zc - p0.z) / d.z;
+    vec3 pc = p0 + d * tc;
+    if (tc < t && pc.y < 1.0 && pc.x > size.x * 0.12 && pc.x < size.x * 0.88) {
+      t = tc;
+      p = pc;
+      face = 4.0;
+      c = kind > 4.5 ? vec3(0.8, 0.12, 0.1) : kind > 3.5 ? vec3(0.9, 0.9, 0.88) : vec3(0.45, 0.3, 0.2) * (0.8 + 0.4 * hsh(seed));
+      c *= 0.8 + 0.2 * step(0.9, p.y);
+    }
   }
   float depthFall = 1.0 - 0.5 * clamp(t * length(d) / max(depth, 0.5), 0.0, 1.0);
   float light = uIndoor * depthFall * (face == 2.0 ? 0.7 : 1.0);
@@ -292,7 +325,7 @@ const GLASS_EMISSIVE = `
   vec3 room = interior(vWin.xy, vWin.zw, d, sunL, vRoom.x, vRoom.y, kind, vRoom.w);
   vec2 u = vWin.xy / max(vWin.zw, vec2(0.01));
   float seed = vRoom.y;
-  if (kind < 0.5 || kind > 1.5) {
+  if (kind < 0.5 || abs(kind - 2.0) < 0.5) {
     float blinds = hsh(seed * 13.1);
     if (blinds < 0.4) {
       float drop = 0.25 + 0.7 * hsh(seed * 17.3);
@@ -317,7 +350,18 @@ const GLASS_EMISSIVE = `
 
 const DECAL_VERT_PARS = `
 attribute vec4 aGlow;
+uniform float uTime;
+uniform vec2 uWind;
 varying vec4 vGlow;
+`;
+const DECAL_VERTEX = `
+vGlow = aGlow;
+if (aGlow.w > 0.0) {
+  vec3 p = transformed;
+  float ph = p.x * 0.37 + p.z * 0.29;
+  float s = sin(uTime * 2.1 + ph) * 0.6 + sin(uTime * 4.7 + ph * 1.9 + p.y * 2.0) * 0.3;
+  transformed += vec3(uWind.x, 0.0, uWind.y) * (0.35 + s) * aGlow.w;
+}
 `;
 const DECAL_FRAG_PARS = `
 uniform float uChan[16];
@@ -380,10 +424,10 @@ export async function createTownMaterials(ctx, atlas) {
     new THREE.MeshStandardMaterial({ map: atlas.texture, transparent: true, depthWrite: false, roughness: 0.72, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }),
     {
       key: 'town-decal',
-      uniforms: { uChan: chan },
+      uniforms: { uChan: chan, uTime: ctx.time, uWind: wind },
       pars: DECAL_VERT_PARS,
       fragPars: DECAL_FRAG_PARS,
-      vertex: 'vGlow = aGlow;',
+      vertex: DECAL_VERTEX,
       color: 'diffuseColor.a *= vGlow.z;',
       emissive: 'totalEmissiveRadiance += diffuseColor.rgb * vGlow.x * uChan[int(vGlow.y + 0.5)];',
     },

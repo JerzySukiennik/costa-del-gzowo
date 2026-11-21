@@ -125,6 +125,12 @@ export function townDistance(x, z) {
   return rectDistance(x, z, TOWN);
 }
 
+export function townSigned(x, z) {
+  const d = rectDistance(x, z, TOWN);
+  if (d > 0) return d;
+  return -Math.min(x - TOWN.x0, TOWN.x1 - x, z - TOWN.z0, TOWN.z1 - z);
+}
+
 export function heightAt(x, z) {
   let y = natural(x, z);
   const ax = Math.abs(x);

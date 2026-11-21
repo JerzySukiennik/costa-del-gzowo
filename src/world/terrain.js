@@ -1,7 +1,7 @@
 // Costa del Gzowo: terrain chunks, baked splat maps, layered PBR ground shader and the physics heightfield.
 import * as THREE from 'three';
 import { BRIDGE, ROAD, TOWN, WORLD } from '../config.js';
-import { heightAt, trackInfo, townDistance, fbm, smooth, clamp } from './heightfield.js';
+import { heightAt, trackInfo, townSigned, fbm, smooth, clamp } from './heightfield.js';
 import { inYard } from './town/layout.js';
 
 export const GROUND = { GRASS: 0, FOREST: 1, MUD: 2, PEBBLES: 3, SAND: 4, GRAVEL: 5, DIRT: 6, ROCK: 7 };
@@ -97,12 +97,14 @@ function bakeSplat(heights) {
       w[GROUND.DIRT] += track * 1.2;
       let town = 0;
       if (x > TOWN.x0 - 40) {
-        town = 1 - smooth(-2, 6, townDistance(x, z) + (n2 - 0.5) * 4);
+        town = 1 - smooth(-3, 1.5, townSigned(x, z) + (n2 - 0.5) * 3);
         const yard = town > 0 && inYard(x, z) ? 1 - smooth(0.3, 0.7, n2 * 0.6 + n1 * 0.5) * 0.4 : 0;
         const bare = town * (1 - yard);
         for (let k = 0; k < 8; k++) w[k] *= 1 - town;
-        w[GROUND.GRAVEL] += bare * (0.5 + 0.8 * n1);
-        w[GROUND.DIRT] += bare * (0.4 + 0.8 * (1 - n1));
+        w[GROUND.GRAVEL] += bare * 0.2 * smooth(0.55, 0.8, n1);
+        w[GROUND.DIRT] += bare * (0.35 + 0.5 * (1 - n1));
+        w[GROUND.MUD] += bare * 0.3 * n2;
+        w[GROUND.GRASS] += bare * (0.35 + 0.7 * smooth(0.35, 0.65, n2));
         w[GROUND.GRASS] += town * yard * 1.4;
         w[GROUND.DIRT] += town * yard * 0.25 * smooth(0.5, 0.8, n2);
         town = bare;
