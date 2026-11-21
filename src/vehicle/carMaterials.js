@@ -26,6 +26,7 @@ const PAINT_PARS = F_BODY + `
 uniform sampler2D tDamage;
 uniform float uDirt;
 uniform float uFlake;
+uniform float uChar;
 float gCoat;
 float gRough;
 float gFlake;
@@ -47,8 +48,11 @@ const PAINT_COLOR = `
   diffuseColor.rgb = mix(diffuseColor.rgb, bare, scratch);
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.25, 0.22, 0.18), dust * 0.72);
   diffuseColor.rgb *= 1.0 - 0.9 * gap;
-  gCoat = (1.0 - scratch) * (1.0 - dust * 0.8) * (1.0 - gap * 0.7);
-  gRough = max(scratch * 0.5, dust * 0.75);
+  float burn = clamp(uChar * 2.3 - (1.0 - smoothstep(-2.5, 2.0, vRest.x)) * 1.1 - grit * 0.55 + smoothstep(0.5, 1.1, vRest.y) * 0.3 * uChar, 0.0, 1.0);
+  vec3 soot = mix(vec3(0.016, 0.014, 0.013), vec3(0.11, 0.065, 0.04), smoothstep(0.55, 0.9, streak) * 0.6);
+  diffuseColor.rgb = mix(diffuseColor.rgb, soot, burn);
+  gCoat = (1.0 - scratch) * (1.0 - dust * 0.8) * (1.0 - gap * 0.7) * (1.0 - burn);
+  gRough = max(max(scratch * 0.5, dust * 0.75), burn * 0.92);
   gFlake = gCoat * (1.0 - gap);
 }
 `;
@@ -82,14 +86,16 @@ varying vec3 vLocal;
 uniform float uLamp[9];
 uniform vec2 uHeadBroken;
 uniform vec2 uTailBroken;
+uniform float uChar;
 `;
+const SOLID_COLOR = `diffuseColor.rgb *= 1.0 - 0.9 * smoothstep(0.6, 1.0, uChar);`;
 const SOLID_NORMAL = `
-roughnessFactor = vFinish.x;
+roughnessFactor = mix(vFinish.x, 0.95, smoothstep(0.6, 1.0, uChar));
 metalnessFactor = vFinish.y;
 `;
 const SOLID_PHYSICAL = `
 #ifdef USE_CLEARCOAT
-  material.clearcoat *= vFinish.z;
+  material.clearcoat *= vFinish.z * (1.0 - smoothstep(0.6, 1.0, uChar));
 #endif
 `;
 const SOLID_EMISSIVE = `
@@ -197,14 +203,15 @@ export function createCarMaterials({ lighting, leatherMaps, paintColor = 0x8f1c1
     if (lighting && lighting.register) lighting.register(m);
     return m;
   };
-  const paintUniforms = { tNoise: noise, tDamage: { value: damageTexture }, uDirt: { value: 0.18 }, uFlake: { value: 0.045 } };
+  const char = { value: 0 };
+  const paintUniforms = { tNoise: noise, tDamage: { value: damageTexture }, uDirt: { value: 0.18 }, uFlake: { value: 0.045 }, uChar: char };
   const paint = reg(hookMaterial(new THREE.MeshPhysicalMaterial({ color: paintColor, metalness: 0.55, roughness: 0.34, clearcoat: 1, clearcoatRoughness: 0.025, envMapIntensity: 1.25, side: THREE.DoubleSide }), {
     key: 'car-paint', uniforms: paintUniforms, pars: V_BODY, fragPars: PAINT_PARS, vertex: V_BODY_SNIP, color: PAINT_COLOR, rough: PAINT_ROUGH, normal: PAINT_NORMAL, physical: PAINT_PHYSICAL, dynamic: true,
   }));
 
-  const lampUniforms = { uLamp: { value: [0, 1, 0, 1, 0, 0, 0, 0.35, 1.2] }, uHeadBroken: { value: new THREE.Vector2() }, uTailBroken: { value: new THREE.Vector2() } };
+  const lampUniforms = { uLamp: { value: [0, 1, 0, 1, 0, 0, 0, 0.35, 1.2] }, uHeadBroken: { value: new THREE.Vector2() }, uTailBroken: { value: new THREE.Vector2() }, uChar: char };
   const solid = reg(hookMaterial(new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.5, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.08, side: THREE.DoubleSide }), {
-    key: 'car-solid', uniforms: lampUniforms, pars: SOLID_V, fragPars: SOLID_F, vertex: SOLID_V_SNIP, normal: SOLID_NORMAL, physical: SOLID_PHYSICAL, emissive: SOLID_EMISSIVE, dynamic: true,
+    key: 'car-solid', uniforms: lampUniforms, pars: SOLID_V, fragPars: SOLID_F, vertex: SOLID_V_SNIP, color: SOLID_COLOR, normal: SOLID_NORMAL, physical: SOLID_PHYSICAL, emissive: SOLID_EMISSIVE, dynamic: true,
   }));
 
   const glassMaterials = {};
@@ -224,7 +231,7 @@ export function createCarMaterials({ lighting, leatherMaps, paintColor = 0x8f1c1
   const fabricTex = weaveTextures();
   const fabric = reg(hookMaterial(new THREE.MeshStandardMaterial({ color: 0x1a1b1d, roughness: 0.92, metalness: 0, normalMap: fabricTex.normal, normalScale: new THREE.Vector2(0.5, 0.5), side: THREE.DoubleSide }), { key: 'car-fabric', dynamic: true }));
 
-  return { paint, solid, lens, leather, fabric, makeGlass, glassMaterials, paintUniforms, lampUniforms, noise, damageCanvas, damageCtx, damageTexture, register: reg, canvasTexture };
+  return { paint, solid, lens, leather, fabric, makeGlass, glassMaterials, char, paintUniforms, lampUniforms, noise, damageCanvas, damageCtx, damageTexture, register: reg, canvasTexture };
 }
 
 export function screenMaterial(texture, lighting, gain = 1.4) {

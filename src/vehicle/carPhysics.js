@@ -70,7 +70,7 @@ export function createCarPhysics({ physics, terrain, model, spawn }) {
     const cs = staticLoad / k;
     return {
       visual: w, front, side: w.side, lx: w.x, lz: w.z, k, damp: front ? 3900 : 3700, L0: RAY_Y - R + cs, cs, comp: cs, prevComp: cs, omega: 0, angle: 0,
-      contact: false, load: staticLoad, slipRatio: 0, slipAngle: 0, slip: 0, surface: 'gravel', surf: SURFACES.gravel, wet: 0, point: new THREE.Vector3(), normal: new THREE.Vector3(0, 1, 0), brakeHold: 1, skid: 0,
+      contact: false, load: staticLoad, slipRatio: 0, slipAngle: 0, slip: 0, surface: 'gravel', surf: SURFACES.gravel, wet: 0, point: new THREE.Vector3(), normal: new THREE.Vector3(0, 1, 0), brakeHold: 1, skid: 0, gone: false, camber: 0, toe: 0,
     };
   });
 
@@ -187,6 +187,15 @@ export function createCarPhysics({ physics, terrain, model, spawn }) {
     let skid = 0;
 
     for (const w of wheels) {
+      if (w.gone) {
+        w.prevComp = 0;
+        w.comp = 0;
+        w.contact = false;
+        w.load = 0;
+        w.slipRatio = 0;
+        w.slip = 0;
+        continue;
+      }
       tmp.set(w.lx, RAY_Y, w.lz).applyQuaternion(quat).add(pos);
       ray.origin.x = tmp.x;
       ray.origin.y = tmp.y;
@@ -345,8 +354,9 @@ export function createCarPhysics({ physics, terrain, model, spawn }) {
     model.group.position.set(t.x, t.y, t.z);
     model.group.quaternion.set(r.x, r.y, r.z, r.w);
     for (const w of wheels) {
+      if (w.gone) continue;
       w.visual.group.position.y = RAY_Y - w.L0 + w.comp;
-      w.visual.group.rotation.y = w.front ? state.steer : 0;
+      w.visual.group.rotation.set(w.camber, (w.front ? state.steer : 0) + w.toe, 0);
       w.visual.spin.rotation.z = (w.side > 0 ? -1 : 1) * w.angle;
     }
     model.steeringWheel.rotation.z = state.steer * 7.5;

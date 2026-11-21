@@ -394,7 +394,7 @@ export async function createRoadsterModel(ctx) {
       const on = beam ? 1 : 0;
       if (mats.LED_Head) mats.LED_Head.emissiveIntensity = lightBase.head * (0.35 + 0.65 * on) * (1 - model.headBroken.x * 0.5 - model.headBroken.y * 0.5);
       if (mats.LED_Tail) mats.LED_Tail.emissiveIntensity = lightBase.tail * (0.3 + 0.7 * on) * (1 + 2.2 * brake) * (1 - model.tailBroken.x * 0.5 - model.tailBroken.y * 0.5);
-      heads.intensity = 420 * on * (1 - Math.max(model.headBroken.x, model.headBroken.y) * 0.6);
+      heads.intensity = 420 * on * (1 - (model.headBroken.x + model.headBroken.y) * 0.5);
     },
     applySim(s) {
       const S = TUNING.suspension;

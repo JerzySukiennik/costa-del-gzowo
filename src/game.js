@@ -178,8 +178,12 @@ export async function createGame(ctx) {
     }
     if (inCar) {
       if (input.hit('KeyR')) {
+        const wrecked = damage.state.exploded;
         car.reset();
-        if (car.state.submersion > 0.3 || car.position.y < -1) car.respawn();
+        if (wrecked || car.state.submersion > 0.3 || car.position.y < -1) {
+          car.respawn();
+          if (damage.repair) damage.repair();
+        }
       }
       if (input.hit('KeyT')) {
         carModel.toggleRoof();
@@ -238,7 +242,7 @@ export async function createGame(ctx) {
 
     exitHint = Math.max(0, exitHint - dt);
     if (nearDoor) hud.prompt('F', 'Enter car');
-    else if (inCar && car.state.stalled) hud.prompt('R', 'Engine flooded, reset car');
+    else if (inCar && car.state.stalled) hud.prompt('R', damage.state.exploded ? 'Car wrecked, get a new one' : 'Engine flooded, reset car');
     else if (inCar && exitHint > 0 && car.state.speed < 1) hud.prompt('F', car.keys ? 'Exit   ·   Space up   ·   C down   ·   Shift boost   ·   Q E radio' : 'Exit   ·   Q E radio   ·   T roof   ·   H lights');
     else hud.prompt('', '');
     hud.drive(game.mode === 'car', car.state);

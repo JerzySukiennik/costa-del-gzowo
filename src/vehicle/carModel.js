@@ -143,9 +143,16 @@ export async function createCarModel(ctx, options = {}) {
   const gripLocal = { L: new THREE.Vector3(-0.182, 0.032, 0), R: new THREE.Vector3(0.182, 0.032, 0) };
   const applyDoor = (name) => {
     const d = doors[name];
+    if (d.gone) return;
     const e = d.value * d.value * (3 - 2 * d.value);
-    d.pivot.rotation.y = d.sign * e * DOOR_MAX;
+    d.pivot.rotation.y = d.sign * (e * DOOR_MAX + (d.slack || 0));
   };
+  const doorPoint = (d, local, out) => {
+    if (d.gone) return group.localToWorld(out.copy(local).add(d.rest));
+    d.pivot.updateWorldMatrix(true, false);
+    return d.pivot.localToWorld(out.copy(local));
+  };
+  for (const d of Object.values(doors)) d.rest = d.pivot.position.clone();
 
   return {
     group, panels, pivots, wheels, interior, windows, body, materials: mats,
@@ -186,19 +193,28 @@ export async function createCarModel(ctx, options = {}) {
       return doors[name] ? doors[name].value : 0;
     },
     handlePoint(out = new THREE.Vector3(), name = 'doorFL') {
-      const d = doors[name];
-      d.pivot.updateWorldMatrix(true, false);
-      return d.pivot.localToWorld(out.copy(d.handle));
+      return doorPoint(doors[name], doors[name].handle, out);
     },
     innerPullPoint(out = new THREE.Vector3(), name = 'doorFL') {
-      const d = doors[name];
-      d.pivot.updateWorldMatrix(true, false);
-      return d.pivot.localToWorld(out.copy(d.pull));
+      return doorPoint(doors[name], doors[name].pull, out);
     },
     supportPoint(out = new THREE.Vector3(), name = 'doorFL') {
+      return doorPoint(doors[name], doors[name].support, out);
+    },
+    setDoorSlack(name, angle) {
       const d = doors[name];
-      d.pivot.updateWorldMatrix(true, false);
-      return d.pivot.localToWorld(out.copy(d.support));
+      if (!d || d.gone) return;
+      d.slack = angle;
+      applyDoor(name);
+    },
+    setDoorGone(name, gone) {
+      const d = doors[name];
+      if (!d) return;
+      d.gone = gone;
+      if (!gone) {
+        d.slack = 0;
+        applyDoor(name);
+      }
     },
     entryGeometry() {
       const s = interior.seat;

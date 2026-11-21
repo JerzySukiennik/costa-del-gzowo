@@ -5,3 +5,4 @@ Niepotrzebne/tools/package-lock.json
 .env
 Niepotrzebne/muzyka/
 assets/music/
+.claude/

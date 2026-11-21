@@ -15,19 +15,21 @@ void main() {
 const FRAG = `
 varying vec4 vColor;
 uniform float uSoft;
+uniform float uFall;
 void main() {
   vec2 p = gl_PointCoord * 2.0 - 1.0;
   float d = dot(p, p);
   if (d > 1.0) discard;
-  float a = mix(1.0, pow(1.0 - d, 1.6), uSoft);
+  float a = mix(1.0, pow(1.0 - d, uFall), uSoft);
   gl_FragColor = vec4(vColor.rgb * a * vColor.a, a * vColor.a * uAlpha);
 }`;
 
 class Pool {
-  constructor(scene, count, { additive, soft, gravity, drag, layer }) {
+  constructor(scene, count, { additive, soft, gravity, drag, layer, cool = false, fall = 1.6 }) {
     this.count = count;
     this.gravity = gravity;
     this.drag = drag;
+    this.cool = cool;
     this.cursor = 0;
     this.alive = 0;
     this.pos = new Float32Array(count * 3);
@@ -41,7 +43,7 @@ class Pool {
     geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
     geo.setAttribute('aColor', new THREE.BufferAttribute(this.col, 4).setUsage(THREE.DynamicDrawUsage));
     geo.setAttribute('aSize', new THREE.BufferAttribute(this.size, 1).setUsage(THREE.DynamicDrawUsage));
-    this.uniforms = { uHeight: { value: 720 }, uSoft: { value: soft ? 1 : 0 }, uAlpha: { value: additive ? 0 : 1 } };
+    this.uniforms = { uHeight: { value: 720 }, uSoft: { value: soft ? 1 : 0 }, uFall: { value: fall }, uAlpha: { value: additive ? 0 : 1 } };
     const material = new THREE.ShaderMaterial({
       vertexShader: 'uniform float uHeight;\n' + VERT,
       fragmentShader: 'uniform float uAlpha;\n' + FRAG,
@@ -94,9 +96,9 @@ class Pool {
       const b = i * 6;
       const fadeIn = Math.min(1, (1 - k) * 8);
       col[i * 4] = base[b];
-      col[i * 4 + 1] = base[b + 1];
-      col[i * 4 + 2] = base[b + 2];
-      col[i * 4 + 3] = base[b + 3] * k * fadeIn;
+      col[i * 4 + 1] = this.cool ? base[b + 1] * (0.22 + 0.78 * k * k) : base[b + 1];
+      col[i * 4 + 2] = this.cool ? base[b + 2] * k * k * k : base[b + 2];
+      col[i * 4 + 3] = base[b + 3] * (this.cool ? Math.min(1, k * 2.2) : k) * fadeIn;
       size[i] = base[b + 4] + base[b + 5] * (1 - k);
     }
     const g = this.points.geometry;
@@ -114,16 +116,22 @@ export function createParticles(scene) {
   const sparks = new Pool(scene, 400, { additive: true, soft: false, gravity: 9.8, drag: 0.6, layer: LAYERS.WATER });
   const smoke = new Pool(scene, 600, { additive: false, soft: true, gravity: -0.5, drag: 1.4, layer: LAYERS.WATER });
   const chips = new Pool(scene, 400, { additive: false, soft: false, gravity: 9.8, drag: 0.3, layer: LAYERS.WATER });
+  const flames = new Pool(scene, 520, { additive: true, soft: true, gravity: -3.2, drag: 1.1, layer: LAYERS.WATER, cool: true, fall: 3.2 });
   const rnd = (a) => (Math.random() - 0.5) * 2 * a;
   return {
-    sparks, smoke, chips,
+    sparks, smoke, chips, flames,
     setHeight(h) {
-      for (const p of [sparks, smoke, chips]) p.uniforms.uHeight.value = h;
+      for (const p of [sparks, smoke, chips, flames]) p.uniforms.uHeight.value = h;
     },
     update(dt) {
       sparks.update(dt);
       smoke.update(dt);
       chips.update(dt);
+      flames.update(dt);
+    },
+    flame(p, size = 0.4, heat = 1, tint = null) {
+      const c = tint || [1.9, 0.92, 0.3];
+      flames.emit(p.x + rnd(size * 0.6), p.y + rnd(size * 0.25), p.z + rnd(size * 0.6), rnd(0.45), 1.1 + Math.random() * 1.6, rnd(0.45), c[0] * heat, c[1] * heat, c[2] * heat, 0.8, size * (0.75 + Math.random() * 0.8), 0.32 + Math.random() * 0.45, -size * 0.4);
     },
     burstSparks(p, n, dir, speed) {
       for (let i = 0; i < n; i++) sparks.emit(p.x, p.y, p.z, dir.x * speed * Math.random() + rnd(2.5), dir.y * speed * Math.random() + Math.random() * 3, dir.z * speed * Math.random() + rnd(2.5), 30, 14 + Math.random() * 8, 3, 1, 0.035, 0.25 + Math.random() * 0.5);

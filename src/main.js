@@ -223,8 +223,10 @@ async function boot() {
     lock();
   };
   hooks.resetCar = () => {
-    if (play.car.state.submersion > 0.3 || play.car.position.y < -1) play.car.respawn();
-    else play.car.reset();
+    if (play.damage.state.exploded || play.car.state.submersion > 0.3 || play.car.position.y < -1) {
+      play.car.respawn();
+      if (play.damage.repair) play.damage.repair();
+    } else play.car.reset();
     screens.hidePause();
     hooks.resume();
   };
