@@ -8,7 +8,7 @@ const [base = 'http://localhost:8907/', out = 'mp'] = process.argv.slice(2);
 const browser = await chromium.launch({
   executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   headless: true,
-  args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', '--mute-audio', '--force_high_performance_gpu'],
+  args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', '--mute-audio', '--force_high_performance_gpu', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'],
 });
 const logs = [];
 async function client(tag, query) {
@@ -27,54 +27,68 @@ const stats = (page) => page.evaluate(() => (window.__dbg.net ? window.__dbg.net
 const say = (label, value) => console.log(label, JSON.stringify(value));
 
 const a = await client('A', 'name=Ala');
-const b = await client('B', 'name=Bob&car=roadster&avatar=jurek');
+const b = await client('B', 'name=Bob&avatar=jurek');
 await a.waitForTimeout(4000);
 let linked = false;
 for (let i = 0; i < 40 && !linked; i++) {
   const [sa, sb] = [await stats(a), await stats(b)];
-  linked = !!sa && !!sb && sa.links.some((l) => l.open || l.relay) && sb.links.some((l) => l.open || l.relay);
+  linked = !!sa && !!sb && sa.links.some((l) => l.open || l.relay) && sb.links.some((l) => l.open || l.relay) && sb.owners.every((o) => o >= 0);
   if (!linked) await a.waitForTimeout(1000);
 }
 say('A stats', await stats(a));
 say('B stats', await stats(b));
-await b.evaluate(() => window.__dbg.play.seat());
+const toDoor = (page, k) => page.evaluate(async (index) => {
+  const d = window.__dbg;
+  const hf = await import('/src/world/heightfield.js');
+  const f = d.play.fleet[index];
+  const spot = f.model.group.localToWorld(f.entry.doorLocal.clone());
+  d.play.player.teleport(spot.x, hf.heightAt(spot.x, spot.z), spot.z, 0);
+}, k);
+const tap = async (page, code, ms = 150) => {
+  await key(page, code, true);
+  await page.waitForTimeout(ms);
+  await key(page, code, false);
+};
+await toDoor(b, 2);
+await b.waitForTimeout(800);
+say('B prompt', await b.evaluate(() => document.getElementById('prompt').textContent));
+await tap(b, 'KeyF');
+await b.waitForFunction(() => window.__dbg.play.game.mode === 'car', null, { timeout: 90000, polling: 500 }).catch(() => logs.push('[B] never got seated'));
+await b.waitForTimeout(1000);
+say('B mode', await b.evaluate(() => ({ mode: window.__dbg.play.game.mode, vehicle: window.__dbg.play.vehicle.index, owners: window.__dbg.net.owners })));
 await key(b, 'KeyW', true);
-await a.waitForTimeout(3500);
+await a.waitForTimeout(6000);
 await key(b, 'KeyW', false);
-await a.waitForTimeout(1500);
+await a.waitForTimeout(6000);
 const bCar = await b.evaluate(() => window.__dbg.play.car.position.toArray().map((n) => +n.toFixed(1)));
-const seen = await stats(a);
-say('B car at', bCar);
-say('A sees', seen && seen.remotes);
+say('B roadster at', bCar);
+say('A sees roadster at', await a.evaluate(() => window.__dbg.play.fleet[2].model.group.position.toArray().map((n) => +n.toFixed(1))));
+say('A stats', await stats(a));
 await a.evaluate(() => {
   const d = window.__dbg;
-  const r = [...d.net.remotes.values()][0];
-  const p = r.vehicle ? r.vehicle.model.group.position : r.tag;
+  const p = d.play.fleet[2].model.group.position;
   d.look(p.x + 6, p.y + 2.2, p.z - 6, p.x, p.y + 0.8, p.z);
 });
 await a.waitForTimeout(2500);
 await a.screenshot({ path: `${out}-a-sees-b.png` });
-await a.evaluate(() => {
-  const d = window.__dbg;
-  const r = [...d.net.remotes.values()][0];
-  d.play.game.cinematic = false;
-  const m = r.vehicle.model;
-  const spot = m.group.localToWorld(new (m.group.position.constructor)(m.seat.x, 0, -m.seat.z + 1.6));
-  d.play.player.teleport(spot.x, spot.y + 0.3, spot.z, 0);
-});
-await a.waitForTimeout(1200);
-say('A ride prompt', await a.evaluate(() => document.getElementById('prompt').textContent));
-await key(a, 'KeyF', true);
-await a.waitForTimeout(150);
-await key(a, 'KeyF', false);
+await a.evaluate(() => (window.__dbg.play.game.cinematic = false));
+await toDoor(a, 2);
+await a.waitForTimeout(1000);
+say('A prompt', await a.evaluate(() => document.getElementById('prompt').textContent));
+await tap(a, 'KeyF');
 await a.waitForTimeout(1500);
-say('A mode', await a.evaluate(() => ({ mode: window.__dbg.play.game.mode, riding: !!window.__dbg.net.riding })));
+say('A mode', await a.evaluate(() => ({ mode: window.__dbg.play.game.mode, vehicle: window.__dbg.play.vehicle.index })));
+say('A stats riding', await stats(a));
+say('B sees', (await stats(b)).players);
 await key(b, 'Space', true);
-await a.waitForTimeout(1200);
+await a.waitForTimeout(4000);
 await key(b, 'Space', false);
-await a.waitForTimeout(2500);
-say('B sees', (await stats(b)).remotes);
+await a.waitForTimeout(4000);
+say('B height', await b.evaluate(() => +window.__dbg.play.car.position.y.toFixed(1)));
 say('A height while riding', await a.evaluate(() => +window.__dbg.play.player.state.position.y.toFixed(1)));
+say('B stats', await stats(b));
+say('A stats end', await stats(a));
+say('A game', await a.evaluate(() => ({ mode: window.__dbg.play.game.mode, fps: window.__dbg.fps, err: window.__error || null })));
 await a.screenshot({ path: `${out}-a-riding.png` });
 await b.evaluate(() => {
   const d = window.__dbg;
@@ -83,5 +97,6 @@ await b.evaluate(() => {
 });
 await b.waitForTimeout(2200);
 await b.screenshot({ path: `${out}-b-sees-passenger.png` });
+say('health', { a: await a.evaluate(() => window.__dbg.play.fleet.map((f) => +f.damage.state.health.toFixed(2))), b: await b.evaluate(() => window.__dbg.play.fleet.map((f) => +f.damage.state.health.toFixed(2))) });
 console.log(logs.slice(-30).join('\n'));
 await browser.close();

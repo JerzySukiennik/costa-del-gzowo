@@ -79,9 +79,23 @@ export const ROAD = {
 };
 
 export const SPAWN = {
-  car: { x: -116, z: 16.5, yaw: 0.12 },
-  player: { x: -122.5, z: 12.4, yaw: 1.2 },
+  car: { x: -113.5, z: 20.4, yaw: 0.12 },
+  player: { x: -119.6, z: 21.6, yaw: 1.45 },
 };
+
+export const FLEET = [
+  { id: 'convertible', x: -113.5, z: 20.4, yaw: 0.12 },
+  { id: 'convertible', x: -113.5, z: 16.8, yaw: 0.12, color: 0x0c3f52, plate: 'GZW 27' },
+  { id: 'roadster', x: -113.5, z: 13.2, yaw: 0.12 },
+  { id: 'roadster', x: -113.5, z: 9.6, yaw: 0.12 },
+  { id: 'heli', x: -127, z: 14, yaw: 0.12 },
+  { id: 'heli', x: -138.5, z: 14, yaw: 0.12 },
+];
+
+export const STATUES = [
+  { id: 'default', x: -122.6, z: 23.3, yaw: Math.PI },
+  { id: 'jurek', x: -125.0, z: 23.3, yaw: Math.PI },
+];
 
 export const WATER_OBSTACLES = BRIDGE.pierXs.flatMap((x) => [
   { x, z: -BRIDGE.columnZ, radius: BRIDGE.columnRadius },

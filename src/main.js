@@ -79,12 +79,7 @@ async function boot() {
     onName: (value) => hooks.name && hooks.name(value),
     vehicles: VEHICLES,
     vehicle: car,
-    onVehicle: (id) => {
-      localStorage.setItem('costa-car', id);
-      const url = new URL(location.href);
-      url.searchParams.delete('car');
-      location.replace(url);
-    },
+    onVehicle: (id) => hooks.vehicle && hooks.vehicle(id),
     onGesture: () => hooks.gesture && hooks.gesture(),
     onStart: () => hooks.start && hooks.start(),
     onResume: () => hooks.resume && hooks.resume(),
@@ -156,6 +151,7 @@ async function boot() {
   ctx.audio.setVolume(volume);
   ctx.audio.setMusicVolume(musicVolume);
   status('Preparing the car');
+  ctx.onAvatar = (id) => hooks.avatar && hooks.avatar(id, true);
   const play = await createGame(ctx);
   status('Filling the river');
   const water = await startWater(ctx, [...WATER_OBSTACLES, ...plants.obstacles]);
@@ -173,19 +169,10 @@ async function boot() {
     import('./net/multiplayer.js')
       .then(({ createMultiplayer }) => createMultiplayer(ctx, play, { name, car, avatar }, { tags, onPlayers }))
       .then((net) => {
-        const [dx, dz] = [[0, 0], [-11, 0], [-22, 0], [11.5, 0.5]][net.slot] || [0, 0];
-        const c = play.car;
-        if ((dx || dz) && !c.state.occupied && Math.hypot(c.position.x - SPAWN.car.x, c.position.z - SPAWN.car.z) < 3) {
-          const p = play.player.state.position;
-          const waiting = play.game.mode === 'foot' && Math.hypot(p.x - SPAWN.player.x, p.z - SPAWN.player.z) < 3;
-          SPAWN.car.x += dx;
-          SPAWN.car.z += dz;
-          c.respawn();
-          if (waiting) {
-            SPAWN.player.x += dx;
-            SPAWN.player.z += dz;
-            play.player.teleport(SPAWN.player.x, heightAt(SPAWN.player.x, SPAWN.player.z), SPAWN.player.z, SPAWN.player.yaw);
-          }
+        const p = play.player.state.position;
+        if (net.slot > 0 && play.game.mode === 'foot' && Math.hypot(p.x - SPAWN.player.x, p.z - SPAWN.player.z) < 2) {
+          const x = SPAWN.player.x - net.slot * 1.3;
+          play.player.teleport(x, heightAt(x, SPAWN.player.z), SPAWN.player.z, SPAWN.player.yaw);
         }
         ctx.net = net;
         onPlayers(net.players());
@@ -193,6 +180,13 @@ async function boot() {
       })
       .catch((error) => console.warn('Multiplayer unavailable, playing alone.', error));
   }
+  hooks.vehicle = (id) => {
+    const item = play.fleet.find((f) => f.id === id && f.driver < 0 && !f.car.state.occupied);
+    if (!item || play.game.mode !== 'foot' || play.game.transition) return;
+    const spot = item.model.group.localToWorld(item.entry.doorLocal.clone());
+    play.player.teleport(spot.x, heightAt(spot.x, spot.z), spot.z, play.player.state.yaw);
+    if (hooks.resume) hooks.resume();
+  };
   hooks.name = (value) => {
     name = value;
     localStorage.setItem('costa-name', value);
@@ -283,10 +277,10 @@ async function boot() {
     resize();
     pipeline.reset = true;
   };
-  hooks.avatar = (id) => {
+  hooks.avatar = (id, applied = false) => {
     avatar = id;
     localStorage.setItem('costa-avatar', id);
-    play.avatars.set(id).catch((error) => console.warn('Avatar unavailable.', error));
+    if (!applied) play.avatars.set(id).catch((error) => console.warn('Avatar unavailable.', error));
     if (ctx.net) ctx.net.setProfile({ avatar: id });
   };
   hooks.volume = (value) => {

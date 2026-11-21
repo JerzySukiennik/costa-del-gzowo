@@ -1,6 +1,6 @@
 // Costa del Gzowo: gameplay orchestration (on-foot and driving modes, entering and leaving the car, effects, water interaction hooks).
 import * as THREE from 'three';
-import { SPAWN, WORLD } from './config.js';
+import { SPAWN, WORLD, FLEET, STATUES } from './config.js';
 import { GROUPS, groups } from './core/physics.js';
 import { heightAt } from './world/heightfield.js';
 import { createCharacter } from './player/character.js';
@@ -11,6 +11,7 @@ import { createCameraRig } from './camera/rig.js';
 import { createParticles } from './fx/particles.js';
 import { createSkidmarks } from './fx/skidmarks.js';
 import { createHud } from './ui/hud.js';
+import { createStatues } from './world/statues.js';
 
 const STEP = 1 / 120;
 
@@ -24,17 +25,28 @@ export async function createGame(ctx) {
   scene.add(character.group);
   const avatars = createAvatars(ctx, character);
   if (ctx.avatar && ctx.avatar !== 'default') await avatars.set(ctx.avatar).catch((error) => console.warn('Avatar unavailable, using the default one.', error));
-  const vehicle = await createVehicle(ctx, ctx.car || 'convertible', SPAWN.car, { physics, terrain, scene, particles, audio });
-  const carModel = vehicle.model;
-  scene.add(carModel.group);
-  const car = vehicle.car;
-  const damage = vehicle.damage;
+  const fleet = [];
+  for (const spot of FLEET) {
+    const item = await createVehicle(ctx, spot.id, spot, { physics, terrain, scene, particles, audio });
+    Object.assign(item, { index: fleet.length, remote: false, driver: -1, passenger: -1, driverName: '' });
+    scene.add(item.model.group);
+    fleet.push(item);
+  }
+  let vehicle = fleet.find((item) => item.id === ctx.car) || fleet[0];
+  let carModel = vehicle.model;
+  let car = vehicle.car;
+  let damage = vehicle.damage;
+  const statues = await createStatues(ctx, STATUES).catch((error) => {
+    console.warn('Avatar statues unavailable.', error);
+    return null;
+  });
   const player = createPlayer({ physics, character, spawn: SPAWN.player });
   const rig = createCameraRig({ camera, physics });
   rig.rig.yaw = SPAWN.player.yaw;
 
   const game = { mode: 'foot', transition: null, beams: false, water: null, time: 0, ride: null };
-  const entry = vehicle.bindEntry({ character, player, rig, game, groundBelow, onSeated: () => (exitHint = 4) });
+  for (const item of fleet) item.bindEntry({ character, player, rig, game, groundBelow, onSeated: () => (exitHint = 4) });
+  let entry = vehicle.entry;
   const moveInput = { x: 0, z: 0, sprint: false, jump: false };
   const f = new THREE.Vector3();
   const v = new THREE.Vector3();
@@ -51,7 +63,7 @@ export async function createGame(ctx) {
   let wakeTimer = 0;
   let lastHitSeen = 0;
   let wasOccupied = false;
-  const carKeys = { handbrake: 'Space', camera: 'KeyC', ...(car.keys || {}) };
+  let carKeys = { handbrake: 'Space', camera: 'KeyC', ...(car.keys || {}) };
   let lastKick = car.state.kick;
   let boostKick = 0;
   let lastLanding = 0;
@@ -59,6 +71,23 @@ export async function createGame(ctx) {
   const pushA = new THREE.Vector4();
   const pushB = new THREE.Vector4();
   const bodyShadow = new THREE.Vector4();
+
+  function activate(item) {
+    if (item === vehicle) return;
+    car.controls.throttle = 0;
+    car.controls.brake = 0;
+    car.controls.steer = 0;
+    car.controls.handbrake = false;
+    vehicle = item;
+    carModel = item.model;
+    car = item.car;
+    damage = item.damage;
+    entry = item.entry;
+    carKeys = { handbrake: 'Space', camera: 'KeyC', ...(car.keys || {}) };
+    lastKick = car.state.kick;
+    lastLanding = 0;
+    lastHitSeen = damage.state.lastHit;
+  }
 
   function groundBelow(x, y, z) {
     ray.origin.x = x;
@@ -80,32 +109,26 @@ export async function createGame(ctx) {
     if (entry.begin('exit')) game.transition = entry;
   }
 
-  function beginRide(remote) {
-    const m = remote.vehicle.model;
-    ctx.net.startRide(remote);
+  function beginRide(item) {
+    activate(item);
     game.mode = 'ride';
-    game.ride = remote;
+    game.ride = item;
     player.setEnabled(false);
     player.state.mode = 'car';
     rig.setMode('car');
     character.setScripted(null);
-    m.group.add(character.group);
-    character.group.position.set(m.seat.x, m.seat.y, -m.seat.z);
+    carModel.group.add(character.group);
+    character.group.position.set(carModel.seat.x, carModel.seat.y, -carModel.seat.z);
     character.group.rotation.set(0, Math.PI / 2, 0);
     if (audio) audio.door(false);
   }
 
   function endRide() {
-    const remote = game.ride;
-    if (ctx.net) ctx.net.stopRide();
-    character.group.getWorldPosition(v);
-    let yaw = player.state.yaw;
-    if (remote && remote.vehicle) {
-      const m = remote.vehicle.model;
-      const side = Math.sign(-m.seat.z) || 1;
-      m.group.localToWorld(v.set(m.seat.x, 0.4, -m.seat.z + side * 1.45));
-      yaw = Math.atan2(remote.proxy.forward.x, remote.proxy.forward.z);
-    }
+    const item = game.ride;
+    const m = item.model;
+    const side = Math.sign(-m.seat.z) || 1;
+    m.group.localToWorld(v.set(m.seat.x, 0.4, -m.seat.z + side * 1.45));
+    const yaw = Math.atan2(item.car.forward.x, item.car.forward.z);
     scene.add(character.group);
     const below = groundBelow(v.x, v.y + 1.4, v.z);
     const y = below !== null ? below : Math.max(heightAt(v.x, v.z), game.water ? game.water.getHeightAt(v.x, v.z) - 1.2 : -1.2);
@@ -195,6 +218,21 @@ export async function createGame(ctx) {
 
   function update(dt, elapsed) {
     game.time = elapsed;
+    if (game.mode === 'foot' && !game.transition) {
+      let best = vehicle;
+      let bestD = Infinity;
+      player.center(v);
+      for (const item of fleet) {
+        doorWorld.copy(item.entry.doorLocal);
+        item.model.group.localToWorld(doorWorld);
+        const d = doorWorld.distanceTo(v);
+        if (d < bestD) {
+          bestD = d;
+          best = item;
+        }
+      }
+      activate(best);
+    }
     const inCar = game.mode === 'car' && !game.transition;
     rig.forward(f);
     const fw = input.axis(['KeyS', 'ArrowDown'], ['KeyW', 'ArrowUp']);
@@ -210,17 +248,24 @@ export async function createGame(ctx) {
 
     doorWorld.copy(entry.doorLocal);
     carModel.group.localToWorld(doorWorld);
-    const nearDoor = game.mode === 'foot' && !game.transition && doorWorld.distanceTo(player.center(v)) < 2.3;
+    const atDoor = game.mode === 'foot' && !game.transition && doorWorld.distanceTo(player.center(v)) < 2.3;
+    const nearDoor = atDoor && vehicle.driver < 0;
+    const rideTarget = atDoor && vehicle.driver >= 0 && vehicle.passenger < 0 && car.state.speed < 3 ? vehicle : null;
+    const statue = statues && game.mode === 'foot' && !game.transition && !atDoor ? statues.near(v, avatars.current) : null;
     const net = ctx.net || null;
-    if (game.mode === 'ride' && (!net || net.riding !== game.ride || !game.ride.vehicle || !game.ride.driving)) endRide();
-    const rideTarget = net && game.mode === 'foot' && !game.transition && !nearDoor ? net.rideNear(player.center(v)) : null;
+    if (game.mode === 'ride' && game.ride.driver < 0) endRide();
     if (input.hit('KeyF') && !game.transition) {
-      if (nearDoor) beginEnter();
-      else if (rideTarget) beginRide(rideTarget);
-      else if (game.mode === 'ride' && game.ride.proxy.state.speed < 4.5) endRide();
+      if (nearDoor) {
+        if (net) net.claim(vehicle);
+        beginEnter();
+      } else if (rideTarget) beginRide(rideTarget);
+      else if (statue) {
+        avatars.set(statue.id).catch((error) => console.warn('Avatar unavailable.', error));
+        if (ctx.onAvatar) ctx.onAvatar(statue.id);
+      } else if (game.mode === 'ride' && car.state.speed < 4.5) endRide();
       else if (inCar && car.state.speed < 4.5 && !(car.keys && car.state.airborne)) beginExit();
     }
-    if (game.mode === 'ride') player.state.position.copy(game.ride.vehicle.model.group.position);
+    if (game.mode === 'ride') player.state.position.copy(carModel.group.position);
     if (inCar) {
       if (input.hit('KeyR')) {
         const wrecked = damage.state.exploded;
@@ -250,16 +295,20 @@ export async function createGame(ctx) {
     acc = Math.min(acc + dt, STEP * 8);
     let first = true;
     while (acc >= STEP) {
-      car.substep(STEP);
+      for (const item of fleet) if (!item.remote) item.car.substep(STEP);
       player.fixedUpdate(STEP, { ...moveInput, jump: first && moveInput.jump }, game.water);
       if (net) net.fixed();
       physics.step();
       acc -= STEP;
       first = false;
     }
-    car.sync();
-    carModel.update(dt);
-    damage.update(dt);
+    for (const item of fleet) {
+      item.car.sync();
+      item.model.update(dt);
+      item.damage.update(dt);
+      if (item !== vehicle && !item.remote) item.model.setLights({ brake: 0, reverse: false, beam: false });
+    }
+    if (statues) statues.update(dt, camera);
     props.update(dt, elapsed, game.water);
     const braking = car.state.occupied && !car.state.reverse ? car.state.brake : car.state.reverse ? car.state.brake : 0;
     carModel.setLights({ brake: braking > 0.05 ? 1 : 0, reverse: car.state.reverse && car.state.occupied, beam: game.beams });
@@ -288,12 +337,13 @@ export async function createGame(ctx) {
 
     exitHint = Math.max(0, exitHint - dt);
     if (nearDoor) hud.prompt('F', car.label || 'Enter car');
-    else if (rideTarget) hud.prompt('F', `Ride with ${rideTarget.profile.name}`);
-    else if (game.mode === 'ride' && game.ride.proxy.state.speed < 1.5) hud.prompt('F', 'Get out');
+    else if (rideTarget) hud.prompt('F', `Ride with ${rideTarget.driverName || 'the driver'}`);
+    else if (statue) hud.prompt('F', `Become ${statue.name}`);
+    else if (game.mode === 'ride' && car.state.speed < 1.5) hud.prompt('F', 'Get out');
     else if (inCar && car.state.stalled) hud.prompt('R', damage.state.exploded ? 'Car wrecked, get a new one' : 'Engine flooded, reset car');
     else if (inCar && exitHint > 0 && car.state.speed < 1) hud.prompt('F', car.hint ? car.hint : car.keys ? 'Exit   ·   Space up   ·   C down   ·   Shift boost   ·   Q E radio' : 'Exit   ·   Q E radio   ·   T roof   ·   H lights');
     else hud.prompt('', '');
-    hud.drive(game.mode !== 'foot', game.mode === 'ride' ? game.ride.proxy.state : car.state);
+    hud.drive(game.mode !== 'foot', car.state);
     hud.note(damage.state.note);
     if (ctx.town && !game.cinematic) {
       const at = game.mode === 'car' ? car.position : player.state.position;
@@ -304,7 +354,7 @@ export async function createGame(ctx) {
       }
     }
 
-    if (!game.cinematic) rig.update(dt, input, player, game.mode === 'ride' ? game.ride.proxy : car, game.water);
+    if (!game.cinematic) rig.update(dt, input, player, car, game.water);
     if (net) net.update(dt, camera);
     if (car.state.kick !== undefined && game.mode === 'car') {
       if (car.state.kick !== lastKick) {
@@ -348,10 +398,28 @@ export async function createGame(ctx) {
   player.sync(0.016, { steer: 0, throttle: 0 });
 
   return {
-    game, update, hud, car, carModel, damage, vehicle, entry, player, character, avatars, rig, particles,
+    game, update, hud, player, character, avatars, rig, particles, fleet, activate, statues,
+    get car() {
+      return car;
+    },
+    get carModel() {
+      return carModel;
+    },
+    get damage() {
+      return damage;
+    },
+    get vehicle() {
+      return vehicle;
+    },
+    get entry() {
+      return entry;
+    },
+    eject() {
+      if (game.mode === 'ride') endRide();
+    },
     setWater(water) {
       game.water = water;
-      car.setWater(water);
+      for (const item of fleet) item.car.setWater(water);
     },
     setViewport(height) {
       particles.setHeight(height);

@@ -459,7 +459,7 @@ export function createCarDamage({ physics, scene, model, car, particles, audio }
     explode,
     update(dt) {
       time += dt;
-      for (const hit of pending.splice(0)) process(hit);
+      for (const hit of pending.splice(0)) if (!state.remote) process(hit);
       scrape = Math.max(0, scrape - dt * 2.5);
       if (audio) audio.setScrape(scrape * Math.min(1, car.state.speed / 8));
       const speed = car.state.speed;

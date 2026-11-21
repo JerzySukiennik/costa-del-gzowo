@@ -187,7 +187,7 @@ export function createRoadsterDamage({ physics, model, car, particles, audio }) 
     explode,
     update(dt) {
       time += dt;
-      for (const hit of pending.splice(0)) process(hit);
+      for (const hit of pending.splice(0)) if (!state.remote) process(hit);
       if (time - normalsAt > 0.3) {
         for (const panel of panels) {
           if (!panel.dirty) continue;

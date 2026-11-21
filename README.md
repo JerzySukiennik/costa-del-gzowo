@@ -42,6 +42,18 @@ Roadster keys: Space lifts off and climbs while held (gently at first, faster th
 
 Helicopter keys: sitting down starts the turbine and the rotor needs about seven seconds to come up to speed. Space climbs, releasing it holds the altitude, C descends and slows down near the ground for a soft landing (over water it stops in a low hover). W flies forward, S brakes and then backs up, A / D turn (a pedal turn in the hover, a banked turn at speed), Shift flies fast, H is the landing light. Without input the helicopter slows to a hover by itself, and at speed it climbs over rising ground. V changes the camera distance.
 
+## Vehicles and avatars on the map
+
+Six vehicles are parked by the bridge: two convertibles, two Roadsters and two Kestrel helicopters. Walk up to any door and press F. The Garage tab in the menu takes you to the door of the one you pick. The two avatars stand on plinths next to the car park: walk up to one and press F to become it.
+
+## Multiplayer
+
+Opening the game puts you in a shared world with up to three other players (a full world opens the next one). Everyone sees the same six vehicles. Whoever drives a vehicle simulates it and the others see it move, collide with it and can ride along: press F at the door of a vehicle somebody is driving. Your name is set in the menu under Settings, where the list of players is too.
+
+- `src/net/`: the Firebase loader, the world lobby (four slots per world), WebRTC links between players with a slow database relay as a fallback, the state packet, vehicle ownership and the remote characters.
+- The Firebase Realtime Database is used only to find each other, to exchange connection offers and to record who simulates which vehicle. Its rules for the `costa` branch are in `Niepotrzebne/net/costa.rules.json`.
+- `?solo=1` turns multiplayer off. `Niepotrzebne/tools/mp-test.mjs` runs two real clients against each other.
+
 ## Music
 
 Two sources, picked automatically:

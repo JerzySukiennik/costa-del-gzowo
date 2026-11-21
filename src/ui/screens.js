@@ -267,18 +267,15 @@ export function createScreens(options = {}) {
 
   function buildGarageTab() {
     const cards = vehicleList.map((v) => {
-      const on = v.id === vehicleId;
       const rows = SPEC_ROWS.filter(([key]) => v.specs && v.specs[key]).map(([key, label]) => el('div', { class: 'sc-spec-head' }, el('span', { text: label }), el('span', { class: 'sc-spec-val', text: v.specs[key] })));
       return el('button', {
-        type: 'button', class: `sc-car${on ? ' on' : ''}`, 'data-nav': '', 'aria-pressed': String(on), 'aria-label': on ? `${v.name}, your car` : `Switch to ${v.name}`,
-        onclick: () => {
-          if (!on) cb('onVehicle', v.id);
-        },
-      }, el('div', { class: 'sc-car-head' }, el('div', { class: 'sc-car-name', text: v.name }), el('div', { class: `sc-car-tag${on ? ' on' : ''}`, text: on ? 'Your car' : 'Switch' })), el('div', { class: 'sc-specs' }, rows));
+        type: 'button', class: 'sc-car', 'data-nav': '', 'aria-label': `Go to the ${v.name}`,
+        onclick: () => cb('onVehicle', v.id),
+      }, el('div', { class: 'sc-car-head' }, el('div', { class: 'sc-car-name', text: v.name }), el('div', { class: 'sc-car-tag', text: 'Go there' })), el('div', { class: 'sc-specs' }, rows));
     });
     return el('div', { class: 'sc-tab-panel', 'data-tab-panel': 'garage' },
       el('div', { class: 'sc-cars' }, cards),
-      vehicleList.length > 1 ? el('div', { class: 'sc-car-note', text: 'Switching cars restarts the drive.' }) : null);
+      el('div', { class: 'sc-car-note', text: 'Every vehicle is parked by the bridge. Pick one to be taken to its door.' }));
   }
 
   const playersBox = el('div', { class: 'sc-players' }, el('div', { class: 'sc-player' }, el('span', { text: 'Playing alone' })));

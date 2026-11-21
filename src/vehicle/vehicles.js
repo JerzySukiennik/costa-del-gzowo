@@ -19,7 +19,7 @@ export async function createVehicle(ctx, id, spawn, deps) {
     const { createRoadster } = await import('./roadster/roadster.js');
     return createRoadster(ctx, spawn, deps);
   }
-  const model = await createCarModel(ctx);
+  const model = await createCarModel(ctx, { color: spawn.color, plate: spawn.plate });
   const car = createCarPhysics({ physics: deps.physics, terrain: deps.terrain, model, spawn });
   model.bindState(car.state);
   const damage = createCarDamage({ physics: deps.physics, scene: deps.scene, model, car, particles: deps.particles, audio: deps.audio });

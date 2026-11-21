@@ -121,7 +121,7 @@ export function createHeliDamage({ physics, model, car, particles, audio }) {
     explode,
     update(dt) {
       time += dt;
-      for (const hit of pending.splice(0)) process(hit);
+      for (const hit of pending.splice(0)) if (!state.remote) process(hit);
       if (car.state.strike && car.state.strike !== seenStrike) {
         seenStrike = car.state.strike;
         state.strikes++;
