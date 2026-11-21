@@ -296,7 +296,26 @@ def labs():
     return im
 
 
-COVERS = {"euro-9x": euro, "funk-narew": funk, "moonwalk": moonwalk, "narew-rock": rock, "costa-fm": costa_fm, "zlota-godzina": zlota, "blok": blok, "filharmonia": filharmonia, "renifer": renifer, "szanghaj": szanghaj, "fala-prl": fala, "gzowo-labs": labs}
+def springs():
+    im = gradient((252, 176, 84), (196, 72, 96))
+    d = ImageDraw.Draw(im)
+    cream = (255, 236, 196)
+    d.ellipse([S / 2 - 250, 150, S / 2 + 250, 650], fill=cream)
+    for i in range(6):
+        y = 430 + i * 40
+        d.rectangle([0, y, S, y + 10 + i * 4], fill=(214, 96, 92))
+    hill = (30, 62, 70)
+    d.polygon([(0, 640), (180, 560), (420, 610), (640, 540), (860, 600), (S, 560), (S, S), (0, S)], fill=hill)
+    d.polygon([(486, 560), (512, 400), (538, 560)], fill=hill)
+    d.rectangle([494, 470, 530, 600], fill=hill)
+    d.polygon([(470, 600), (494, 540), (494, 600)], fill=hill)
+    d.polygon([(554, 600), (530, 540), (530, 600)], fill=hill)
+    center(d, "Springs Radio", font("rockwell", 118), 690, cream)
+    center(d, "91.5  COSTA ORIGINALS", font("futura", 50), 850, (252, 176, 84))
+    return im
+
+
+COVERS = {"euro-9x": euro, "funk-narew": funk, "moonwalk": moonwalk, "narew-rock": rock, "costa-fm": costa_fm, "zlota-godzina": zlota, "blok": blok, "filharmonia": filharmonia, "renifer": renifer, "szanghaj": szanghaj, "fala-prl": fala, "gzowo-labs": labs, "springs": springs}
 
 
 def main():

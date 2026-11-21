@@ -42,13 +42,12 @@ Roadster keys: Space lifts off and climbs while held (gently at first, faster th
 
 ## Music
 
-Three sources, picked automatically:
+Two sources, picked automatically:
 
 - `assets/music/` holds the full local library for the title, the menu and fourteen radio stations. It is not part of this repository.
-- Without that folder the title, pause and menu music play the official YouTube uploads in a now-playing card (`src/audio/deck.js`), and the radio falls back to `assets/music-public/`: Gzowo Labs' own tracks as files plus two stations that stream through the same card.
-- If the YouTube player is unavailable, the title and menu use Gzowo Labs' own tracks.
+- Without that folder the game plays its own soundtrack from `assets/music-public/`: "Sun Goes Down" on the title screen, "Miami Soul" in the pause and menu screens, and all four tracks on Springs Radio 91.5. With the local library present, Springs Radio is added to its stations.
 
-`?soundtrack=youtube` forces the streamed mode for testing.
+`?soundtrack=public` forces the public soundtrack for testing.
 
 ## Structure
 
@@ -66,8 +65,8 @@ Three sources, picked automatically:
 - Town textures (1k, CC0, [Poly Haven](https://polyhaven.com)): Painted Plaster Wall, Painted Worn Brick, Large Red Bricks, Clay Roof Tiles 02, Distressed Painted Planks, Corrugated Iron, Painted Metal Shutter, Concrete Pavement. Fetched with `Niepotrzebne/tools/fetch_assets.py`.
 - Town signs, neon, murals, graffiti, posters, stickers and street paint are drawn in code at load time (`src/world/town/atlas.js`); every business, band and brand in them is invented.
 - Sound: recordings from [freesound.org](https://freesound.org), all CC0, listed in `assets/audio/CREDITS.md`.
-- Radio station covers: two generated images and twelve drawn by `Niepotrzebne/tools/make_covers.py`.
+- Radio station covers: two generated images and thirteen drawn by `Niepotrzebne/tools/make_covers.py`.
 - The convertible, the default character, bridge, palms and water are generated in code.
 - Roadster model and vapour flipbook: from Jurek's own Roadster 88 and Roadster Jump projects. Thruster sounds from [freesound.org](https://freesound.org), all CC0: thrust loop by kkenny101 (861613); thrust start and big boost by Singular_Estudio (136462), Astounded (477846) and mcpable (131934); thrust stop by mcpable (131934); valve puff by meisterleise (547447, 547448); flap servo by derjuli (824121).
 - Jurek avatar: body, clothes and head are Jurek's own Avatar project.
-- `assets/music-public/`: tracks by Gzowo Labs.
+- `assets/music-public/`: the Costa del Gzowo soundtrack, four original tracks generated for the game with Google's Lyria 3 Pro music model (they carry its SynthID watermark).

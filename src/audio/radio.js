@@ -1,19 +1,19 @@
-// Costa del Gzowo: in-car radio with genre stations that keep broadcasting while you are tuned elsewhere; tracks come from local files or the now-playing deck.
+// Costa del Gzowo: in-car radio with genre stations that keep broadcasting while you are tuned elsewhere; every music folder that has a track list adds its tracks.
 import { RADIO } from '../config.js';
 import { createRadioSwitcher } from '../ui/radioSwitcher.js';
 
-export async function createRadio({ audio, deck = null, folders = ['assets/music/', 'assets/music-public/'] }) {
-  let library = {};
-  let base = folders[0];
+export async function createRadio({ audio, folders = ['assets/music/', 'assets/music-public/'] }) {
+  const library = {};
   for (const folder of folders) {
     try {
       const response = await fetch(folder + 'tracks.json');
       if (!response.ok) continue;
-      library = await response.json();
-      base = folder;
-      break;
+      for (const [id, tracks] of Object.entries(await response.json())) {
+        const list = library[id] || (library[id] = []);
+        for (const t of tracks) if (t.file && !list.some((o) => o.title === t.title && o.artist === t.artist)) list.push({ ...t, url: folder + t.file });
+      }
     } catch (e) {
-      library = {};
+      continue;
     }
   }
   const stations = RADIO.map((s) => ({ ...s, tracks: library[s.id] || [] })).filter((s) => s.tracks.length > 0);
@@ -25,7 +25,6 @@ export async function createRadio({ audio, deck = null, folders = ['assets/music
   let station = Number.isInteger(saved) && saved >= -1 && saved < stations.length ? saved : 0;
   let active = false;
   let track = 0;
-  let onDeck = false;
 
   function position(index) {
     const tracks = stations[index].tracks;
@@ -50,7 +49,6 @@ export async function createRadio({ audio, deck = null, folders = ['assets/music
 
   function silence(seconds) {
     stream.fade(0, seconds);
-    if (onDeck && deck) deck.fade(0, seconds, 'radio');
   }
 
   function next() {
@@ -61,25 +59,8 @@ export async function createRadio({ audio, deck = null, folders = ['assets/music
   }
 
   function start(offset) {
-    const s = stations[station];
-    const t = s.tracks[track];
-    if (t.youtube) {
-      stream.fade(0, 0.3);
-      onDeck = !!deck && deck.play({
-        id: t.youtube, start: offset, loop: false, title: t.title, artist: t.artist, label: `${s.name} ${s.frequency}`, place: 'drive', owner: 'radio',
-        onEnded: next,
-        onError: () => {
-          onDeck = false;
-          if (active && station >= 0) announce('No signal');
-        },
-      });
-      if (onDeck) deck.fade(0.9, 0.5, 'radio');
-      return onDeck;
-    }
-    if (onDeck && deck) deck.fade(0, 0.3, 'radio');
-    onDeck = false;
     stream.level = 0;
-    stream.play(base + t.file, { offset, loop: false });
+    stream.play(stations[station].tracks[track].url, { offset, loop: false });
     stream.fade(0.9, 0.5);
     return true;
   }
@@ -131,10 +112,7 @@ export async function createRadio({ audio, deck = null, folders = ['assets/music
     },
     pause(on) {
       if (on) silence(0.3);
-      else if (active && station >= 0) {
-        if (stations[station].tracks[track].youtube) tune();
-        else stream.fade(0.9, 0.6);
-      }
+      else if (active && station >= 0) stream.fade(0.9, 0.6);
     },
   };
 }

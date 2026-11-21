@@ -19,7 +19,6 @@ import { heightAt, flowAt } from './world/heightfield.js';
 import { createGame } from './game.js';
 import { createAudio } from './audio/audio.js';
 import { createRadio } from './audio/radio.js';
-import { createDeck } from './audio/deck.js';
 import { createSoundtrack } from './audio/soundtrack.js';
 import { createCinematics } from './camera/cinematics.js';
 import { createScreens } from './ui/screens.js';
@@ -60,9 +59,7 @@ async function boot() {
   let car = params.get('car') || localStorage.getItem('costa-car') || VEHICLES[0].id;
   if (!VEHICLES.some((v) => v.id === car)) car = VEHICLES[0].id;
   const hooks = {};
-  const streamed = params.get('soundtrack') === 'youtube';
-  const localMusic = !streamed && (await fetch(MUSIC.title.url, { method: 'HEAD' }).then((r) => r.ok, () => false));
-  const deck = localMusic ? null : createDeck();
+  const localMusic = params.get('soundtrack') !== 'public' && (await fetch(MUSIC.title.url, { method: 'HEAD' }).then((r) => r.ok, () => false));
   const screens = createScreens({
     title: GAME.title,
     cssHref: 'src/ui/screens.css',
@@ -157,8 +154,8 @@ async function boot() {
   if (water.setSunShadow) water.setSunShadow(sun.texture, sun.matrix);
   pipeline.water = water;
   play.setWater(water);
-  ctx.radio = await createRadio({ audio: ctx.audio, deck, folders: localMusic ? ['assets/music/', 'assets/music-public/'] : ['assets/music-public/'] });
-  const soundtrack = createSoundtrack({ audio: ctx.audio, deck, local: localMusic, onTrack: (track) => screens.setTrack(track) });
+  ctx.radio = await createRadio({ audio: ctx.audio, folders: localMusic ? ['assets/music/', 'assets/music-public/'] : ['assets/music-public/'] });
+  const soundtrack = createSoundtrack({ audio: ctx.audio, local: localMusic, onTrack: (track) => screens.setTrack(track) });
   const cinematics = createCinematics({ camera, pipeline, lighting });
   play.game.cinematic = true;
   play.character.group.visible = false;
@@ -305,7 +302,6 @@ async function boot() {
     const dt = Math.min(raw, 0.05);
     fps += (1 / Math.max(raw, 0.001) - fps) * 0.05;
     ctx.audio.tickMusic(Math.min(raw, 0.1));
-    if (deck) deck.tick(Math.min(raw, 0.1), musicVolume);
     renderer.info.reset();
     if (!paused) {
       elapsed += dt;
@@ -338,7 +334,7 @@ async function boot() {
   }
 
   window.__dbg = {
-    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, skyline, water, play, input, ctx, screens, cinematics, deck, soundtrack, town: ctx.town,
+    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, skyline, water, play, input, ctx, screens, cinematics, soundtrack, town: ctx.town,
     get fps() {
       return Math.round(fps);
     },

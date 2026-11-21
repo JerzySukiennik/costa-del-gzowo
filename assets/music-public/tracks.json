@@ -1,38 +1,28 @@
 {
- "gzowo-labs": [
+ "springs": [
   {
-   "file": "gzowo-labs-gzowo-jest-najlepsze.mp3",
-   "title": "Gzowo Jest Najlepsze",
-   "artist": "Gzowo Labs",
-   "duration": 145.0
+   "file": "costa-sun-goes-down.mp3",
+   "title": "Sun Goes Down",
+   "artist": "Costa del Gzowo OST",
+   "duration": 116.1
   },
   {
-   "file": "gzowo-labs-moon-mission.mp3",
-   "title": "Moon Mission",
-   "artist": "Gzowo Labs",
-   "duration": 81.2
+   "file": "costa-golden-swagger.mp3",
+   "title": "Golden Swagger",
+   "artist": "Costa del Gzowo OST",
+   "duration": 121.8
   },
   {
-   "file": "gzowo-labs-untitledtypebeat.mp3",
-   "title": "untitledtypebeat",
-   "artist": "Gzowo Labs",
-   "duration": 44.4
-  }
- ],
- "narew-rock": [
+   "file": "costa-miami-soul.mp3",
+   "title": "Miami Soul",
+   "artist": "Costa del Gzowo OST",
+   "duration": 121.7
+  },
   {
-   "youtube": "xAgUYyosqVM",
-   "title": "Love Is a Long Road",
-   "artist": "Tom Petty and the Heartbreakers",
-   "duration": 247
-  }
- ],
- "costa-fm": [
-  {
-   "youtube": "H3Aay-47ZT0",
-   "title": "Hot Together",
-   "artist": "The Pointer Sisters",
-   "duration": 255
+   "file": "costa-sunshine-epic.mp3",
+   "title": "Sunshine Epic",
+   "artist": "Costa del Gzowo OST",
+   "duration": 119.7
   }
  ]
 }

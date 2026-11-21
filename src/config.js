@@ -6,16 +6,17 @@ export const GAME = {
 
 export const MUSIC = {
   title: {
-    url: 'assets/music/love-is-a-long-road.mp3', youtube: 'xAgUYyosqVM', title: 'Love Is a Long Road', artist: 'Tom Petty and the Heartbreakers',
-    own: { url: 'assets/music-public/gzowo-labs-moon-mission.mp3', title: 'Moon Mission', artist: 'Gzowo Labs' },
+    url: 'assets/music/love-is-a-long-road.mp3', title: 'Love Is a Long Road', artist: 'Tom Petty and the Heartbreakers',
+    own: { url: 'assets/music-public/costa-sun-goes-down.mp3', title: 'Sun Goes Down', artist: 'Costa del Gzowo OST' },
   },
   menu: {
-    url: 'assets/music/hot-together.mp3', youtube: 'H3Aay-47ZT0', title: 'Hot Together', artist: 'The Pointer Sisters',
-    own: { url: 'assets/music-public/gzowo-labs-untitledtypebeat.mp3', title: 'untitledtypebeat', artist: 'Gzowo Labs' },
+    url: 'assets/music/hot-together.mp3', title: 'Hot Together', artist: 'The Pointer Sisters',
+    own: { url: 'assets/music-public/costa-miami-soul.mp3', title: 'Miami Soul', artist: 'Costa del Gzowo OST' },
   },
 };
 
 export const RADIO = [
+  { id: 'springs', name: 'Springs Radio', frequency: '91.5', genre: 'Costa Originals' },
   { id: 'riviera', name: 'Riviera', frequency: '107.1', genre: 'French House' },
   { id: 'costa-club', name: 'Costa Club', frequency: '99.9', genre: 'House' },
   { id: 'euro-9x', name: 'Euro 9X', frequency: '93.3', genre: 'Eurodance' },
