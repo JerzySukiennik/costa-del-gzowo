@@ -62,6 +62,7 @@ async function boot() {
   let car = params.get('car') || localStorage.getItem('costa-car') || VEHICLES[0].id;
   if (!VEHICLES.some((v) => v.id === car)) car = VEHICLES[0].id;
   const hooks = {};
+  const lookTools = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   let name = (params.get('name') || localStorage.getItem('costa-name') || '').trim().slice(0, 16);
   if (!name) {
     name = `Player ${Math.floor(10 + Math.random() * 90)}`;
@@ -79,6 +80,7 @@ async function boot() {
     onAvatar: (id) => hooks.avatar && hooks.avatar(id),
     name,
     onName: (value) => hooks.name && hooks.name(value),
+    lookTools,
     onLook: () => hooks.look && hooks.look(),
     vehicles: VEHICLES,
     vehicle: car,
@@ -156,18 +158,19 @@ async function boot() {
   status('Preparing the car');
   ctx.onAvatar = (id) => hooks.avatar && hooks.avatar(id, true);
   const play = await createGame(ctx);
-  const look = createLook();
+  const look = createLook(null, lookTools);
   const useLook = (values) => {
     pipeline.look = values;
     play.rig.setLook(values);
   };
   useLook(look.values);
   let lookOpen = false;
-  const lookEditor = createLookEditor(look, {
+  const lookEditor = lookTools ? createLookEditor(look, {
     onClose: () => showLook(false),
     onCompare: (on) => useLook(on ? look.preview('original') : look.values),
-  });
+  }) : null;
   function showLook(on) {
+    if (!lookEditor) return;
     lookOpen = on;
     lookEditor.show(on);
     if (on && document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
@@ -326,7 +329,7 @@ async function boot() {
     if (e.code === 'Escape') {
       setPaused(true);
       screens.showPause();
-    } else if (e.code === 'KeyO') {
+    } else if (e.code === 'KeyO' && lookEditor) {
       showLook(!lookOpen);
     } else if (e.code === 'KeyM' || e.code === 'Tab') {
       e.preventDefault();

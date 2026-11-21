@@ -142,7 +142,7 @@ export function createScreens(options = {}) {
   function buildControls(single = false) {
     return el('div', { class: 'sc-controls' },
       el('div', { class: `sc-keys-grid${single ? ' one' : ''}` }, keyCol('On foot', FOOT), keyCol('In the car', CAR), keyCol('Roadster', ROADSTER), keyCol('Helicopter', HELI)),
-      el('div', { class: 'sc-keys-common' }, keyCol('Anywhere', COMMON)));
+      el('div', { class: 'sc-keys-common' }, keyCol('Anywhere', cfg.lookTools ? COMMON : COMMON.filter(([label]) => label !== 'Look editor'))));
   }
 
   function buildPanel(name, heading, body) {
@@ -306,7 +306,7 @@ export function createScreens(options = {}) {
     return el('div', { class: 'sc-tab-panel sc-tab-settings', 'data-tab-panel': 'settings' },
       el('div', { class: 'sc-tab-grid' },
         el('div', { class: 'sc-card' }, el('div', { class: 'sc-card-title', text: 'Settings' }), buildSettings(),
-          el('button', { type: 'button', class: 'sc-look', 'data-nav': '', onclick: () => cb('onLook') }, 'Look editor: colours, lens and camera'),
+          cfg.lookTools ? el('button', { type: 'button', class: 'sc-look', 'data-nav': '', onclick: () => cb('onLook') }, 'Look editor: colours, lens and camera') : null,
           el('div', { class: 'sc-card-title sc-card-sub', text: 'Players here' }), buildName(), playersBox),
         el('div', { class: 'sc-card' }, el('div', { class: 'sc-card-title', text: 'Controls' }), buildControls())));
   }

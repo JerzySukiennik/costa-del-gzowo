@@ -35,7 +35,7 @@ export const GROUPS = [
 
 const KEY = 'costa-look-2';
 
-export function createLook(onChange) {
+export function createLook(onChange, editable = true) {
   const values = {};
   let id = LOOKS[0].id;
   const fill = (preset) => {
@@ -44,7 +44,7 @@ export function createLook(onChange) {
   };
   fill(LOOKS[0]);
   try {
-    const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    const saved = editable ? JSON.parse(localStorage.getItem(KEY) || 'null') : null;
     if (saved && saved.values) {
       const preset = LOOKS.find((l) => l.id === saved.id);
       if (preset) fill(preset);
