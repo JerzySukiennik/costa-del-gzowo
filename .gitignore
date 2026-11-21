@@ -5,3 +5,5 @@ Niepotrzebne/tools/package-lock.json
 .env
 Niepotrzebne/muzyka/
 assets/music/
+Niepotrzebne/town/shots/
+Niepotrzebne/town/steps-*.json

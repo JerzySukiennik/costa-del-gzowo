@@ -9,7 +9,7 @@ const measure = (name, p) => `(() => {
   const gl = d.renderer.getContext();
   const cam = d.camera.position;
   const ts = []; let calls = 0, tris = 0;
-  for (let i = 0; i < 48; i++) {
+  for (let i = 0; i < 26; i++) {
     d.renderer.info.reset();
     for (const c of d.ctx.cull) c.object.visible = (c.x - cam.x) ** 2 + (c.z - cam.z) ** 2 < c.range * c.range;
     d.trees.update(cam);
@@ -19,11 +19,10 @@ const measure = (name, p) => `(() => {
     const t0 = performance.now();
     d.pipeline.render(1 / 60, 100 + i / 60);
     gl.finish();
-    if (i >= 8) ts.push(performance.now() - t0);
-    calls = d.renderer.info.render.calls; tris = d.renderer.info.render.triangles;
+    if (i >= 8) { ts.push(performance.now() - t0); calls += d.renderer.info.render.calls; tris += d.renderer.info.render.triangles; }
   }
   ts.sort((a, b) => a - b);
-  return { view: '${name}', ms: +ts[ts.length >> 1].toFixed(2), p90: +ts[Math.floor(ts.length * 0.9)].toFixed(2), calls, tris };
+  return { view: '${name}', ms: +ts[ts.length >> 1].toFixed(2), p90: +ts[Math.floor(ts.length * 0.9)].toFixed(2), calls: Math.round(calls / 18), mtris: +(tris / 18e6).toFixed(2) };
 })()`;
 const steps = [{ js: '0', wait: 2500 }];
 for (const n of names) steps.push({ js: measure(n, V[n]), wait: 700, shot: n });

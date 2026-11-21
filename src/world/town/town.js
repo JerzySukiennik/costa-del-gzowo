@@ -62,13 +62,20 @@ export async function createTown(ctx) {
     return mesh;
   };
   for (const c of cells.values()) {
-    add(c.surface.geometry(), mats.surface);
-    add(c.glass.geometry(), mats.glass);
-    add(c.decal.geometry(), mats.decal, { layer: LAYERS.DETAIL, cast: false, order: 1 });
+    add(c.surface.geometry(), mats.surface, { range: 900, x: c.cx, z: c.cz });
+    add(c.glass.geometry(), mats.glass, { range: 900, x: c.cx, z: c.cz });
+    add(c.decal.geometry(), mats.decal, { layer: LAYERS.DETAIL, cast: false, order: 1, range: 280, x: c.cx, z: c.cz });
     add(c.fine.geometry(), mats.surface, { range: 140, x: c.cx, z: c.cz });
     add(c.fineDecal.geometry(), mats.decal, { layer: LAYERS.DETAIL, cast: false, range: 90, x: c.cx, z: c.cz, order: 2 });
   }
-  for (const m of furniture.meshes) group.add(m);
+  for (const m of furniture.meshes) {
+    if (m.isInstancedMesh && !m.frustumCulled) {
+      m.frustumCulled = true;
+      m.boundingSphere = new THREE.Sphere(new THREE.Vector3((TOWN.x0 + TOWN.x1) / 2, 6, 0), 115);
+    }
+    group.add(m);
+    ctx.cull.push({ object: m, x: (TOWN.x0 + TOWN.x1) / 2, z: 0, range: 300 });
+  }
   group.updateMatrixWorld(true);
   scene.add(group);
 

@@ -427,6 +427,10 @@ export function buildBuildings(T) {
   }));
 
   out.push(...buildSpecials(T));
+  const hobby = plot('hobby');
+  T.post((hobby.x0 + hobby.x1) / 2, TOWN.walk + 7.5, TOWN.walk + 13.1, (hobby.z0 + hobby.z1) / 2, 0.6);
+  const cone = plot('icecream');
+  T.post((cone.x0 + cone.x1) / 2, TOWN.walk + 4.3, TOWN.walk + 9.5, (cone.z0 + cone.z1) / 2, 0.95);
   return out;
 }
 
