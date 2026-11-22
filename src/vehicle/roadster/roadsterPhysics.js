@@ -8,7 +8,7 @@ import { RoadsterSim } from './roadsterSim.js';
 import { TUNING } from './tuning.js';
 
 const TO_GAME = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
-const EDGE = WORLD.half - 50;
+const EDGE = WORLD.bound - 60;
 const edgePush = (p, v) => {
   const over = Math.abs(p) - EDGE;
   if (over <= 0) return 0;

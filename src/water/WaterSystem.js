@@ -154,7 +154,7 @@ export class WaterSystem {
     };
     this.dummyDepth = dummyDepth;
 
-    this.surface = new WaterSurface({ segments: q.segments, layer: LAYERS.WATER, shared: this.shared });
+    this.surface = new WaterSurface({ segments: q.segments, maxRadius: 3600, layer: LAYERS.WATER, shared: this.shared });
     const su = this.surface.uniforms;
     su.uSlope0.value = this.spectrum.slopeTextures[0];
     su.uSlope1.value = this.spectrum.slopeTextures[1];

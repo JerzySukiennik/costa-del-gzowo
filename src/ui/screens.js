@@ -610,10 +610,10 @@ export function createScreens(options = {}) {
     g.fillStyle = 'rgba(190,176,140,0.9)';
     g.fillRect(ROAD.pullOff.x0, ROAD.pullOff.z0, ROAD.pullOff.x1 - ROAD.pullOff.x0, ROAD.pullOff.z1 - ROAD.pullOff.z0);
     g.fillStyle = '#3a3e41';
-    g.fillRect(-262, -4.5, 524, 9);
+    g.fillRect(-262, -4.5, 262 + ROAD.east + 12, 9);
     g.globalAlpha = 0.9;
     g.fillStyle = AMBER;
-    g.fillRect(-262, -0.3, 524, 0.6);
+    g.fillRect(-262, -0.3, 262 + ROAD.east + 12, 0.6);
     g.globalAlpha = 1;
     g.fillStyle = '#6e7377';
     g.fillRect(-48, -6.3, 96, 12.6);
@@ -628,6 +628,7 @@ export function createScreens(options = {}) {
     }
     g.fillStyle = 'rgba(150,140,120,0.55)';
     g.fillRect(TOWN.x0 + 4, TOWN.z0 + 4, TOWN.x1 - TOWN.x0 - 8, TOWN.z1 - TOWN.z0 - 8);
+    g.translate(TOWN.shift, 0);
     g.fillStyle = '#3a3e41';
     g.fillRect(MAIN.x0, -MAIN.half, MAIN.x1 - MAIN.x0, MAIN.half * 2);
     for (const c of CROSS) g.fillRect(c.x - c.half, c.z0, c.half * 2, c.z1 - c.z0);

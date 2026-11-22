@@ -16,7 +16,6 @@ import { createTrees } from './world/trees.js';
 import { createPlants } from './world/plants.js';
 import { createGrass } from './world/grass.js';
 import { createProps } from './world/props.js';
-import { createSkyline } from './world/skyline.js';
 import { createTown } from './world/town/town.js';
 import { createFallbackWater } from './world/fallbackWater.js';
 import { heightAt, flowAt } from './world/heightfield.js';
@@ -143,7 +142,6 @@ async function boot() {
   ctx.grass = createGrass(ctx, { density: QUALITY[quality].grass, reach: QUALITY[quality].grassReach });
   status('Placing props');
   ctx.props = await createProps(ctx);
-  const skyline = createSkyline(ctx);
   status('Building Gzowo Springs');
   await nextFrame();
   ctx.town = await createTown(ctx);
@@ -583,7 +581,7 @@ async function boot() {
   }
 
   window.__dbg = {
-    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, skyline, water, play, input, ctx, screens, cinematics, soundtrack, town: ctx.town, perf, lod, waterWatch,
+    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, water, play, input, ctx, screens, cinematics, soundtrack, town: ctx.town, perf, lod, waterWatch,
     step(dt, time) {
       elapsed = time === undefined ? elapsed + dt : time;
       renderFrame(dt);

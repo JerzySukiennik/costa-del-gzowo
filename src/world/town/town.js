@@ -1,4 +1,4 @@
-// Costa del Gzowo: Gzowo Springs assembly (cells of merged geometry, materials, colliders, live lights, wind and props).
+// Costa del Gzowo: Gzowo Springs assembly (cells of merged geometry, materials, colliders, live lights, wind and props), built in the town's own coordinates and moved into the world as one piece.
 import * as THREE from 'three';
 import { LAYERS, TOWN } from '../../config.js';
 import { rng } from '../scatter.js';
@@ -9,11 +9,41 @@ import { buildStreets } from './streets.js';
 import { buildBuildings } from './buildings.js';
 import { buildFurniture } from './furniture.js';
 import { inTown } from './layout.js';
+import { TOWN_OFFSET } from './space.js';
 
 const CELL_X = [256, 300, 346, 380, 420];
 
+function shiftedPhysics(physics, dx, dz) {
+  const move = (desc) => {
+    desc.translation = { x: desc.translation.x + dx, y: desc.translation.y, z: desc.translation.z + dz };
+    return desc;
+  };
+  const world = new Proxy(physics.world, {
+    get(target, key) {
+      if (key === 'createRigidBody') return (desc) => target.createRigidBody(move(desc));
+      if (key === 'createCollider') return (desc, parent) => target.createCollider(parent ? desc : move(desc), parent);
+      const value = target[key];
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+  return {
+    ...physics,
+    world,
+    staticBox: (x0, x1, y0, y1, z0, z1, surface, friction) => physics.staticBox(x0 + dx, x1 + dx, y0, y1, z0 + dz, z1 + dz, surface, friction),
+    staticCylinder: (x, y0, y1, z, radius, surface) => physics.staticCylinder(x + dx, y0, y1, z + dz, radius, surface),
+    staticTrimesh: (vertices, indices, surface, friction) => {
+      for (let i = 0; i < vertices.length; i += 3) {
+        vertices[i] += dx;
+        vertices[i + 2] += dz;
+      }
+      return physics.staticTrimesh(vertices, indices, surface, friction);
+    },
+  };
+}
+
 export async function createTown(ctx) {
-  const { scene, physics } = ctx;
+  const { scene } = ctx;
+  const physics = shiftedPhysics(ctx.physics, TOWN_OFFSET.x, TOWN_OFFSET.z);
   const atlas = createAtlas();
   const mats = await createTownMaterials(ctx, atlas);
   const cells = new Map();
@@ -58,7 +88,7 @@ export async function createTown(ctx) {
     mesh.renderOrder = order;
     group.add(mesh);
     triangles += geometry.attributes.position.count / 3;
-    if (range) ctx.cull.push({ object: mesh, x, z, range });
+    if (range) ctx.cull.push({ object: mesh, x: x + TOWN_OFFSET.x, z: z + TOWN_OFFSET.z, range });
     return mesh;
   };
   for (const c of cells.values()) {
@@ -71,11 +101,12 @@ export async function createTown(ctx) {
   for (const m of furniture.meshes) {
     if (m.isInstancedMesh && !m.frustumCulled) {
       m.frustumCulled = true;
-      m.boundingSphere = new THREE.Sphere(new THREE.Vector3((TOWN.x0 + TOWN.x1) / 2, 6, 0), 115);
+      m.boundingSphere = new THREE.Sphere(new THREE.Vector3((TOWN.x0 + TOWN.x1) / 2 - TOWN_OFFSET.x, 6, -TOWN_OFFSET.z), 115);
     }
     group.add(m);
     ctx.cull.push({ object: m, x: (TOWN.x0 + TOWN.x1) / 2, z: 0, range: 300 });
   }
+  group.position.set(TOWN_OFFSET.x, 0, TOWN_OFFSET.z);
   group.updateMatrixWorld(true);
   scene.add(group);
 
@@ -124,7 +155,7 @@ export async function createTown(ctx) {
     buildings,
     furniture,
     name: TOWN.name,
-    contains: (x, z) => inTown(x, z, 6),
+    contains: (x, z) => inTown(x - TOWN_OFFSET.x, z - TOWN_OFFSET.z, 6),
     update,
   };
 }

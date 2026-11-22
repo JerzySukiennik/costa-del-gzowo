@@ -37,18 +37,29 @@ export const WORLD = {
   waterLevel: 0,
   half: 460,
   core: 320,
+  bound: 1400,
   flowSpeed: 0.55,
 };
 
 export const TOWN = {
   name: 'Gzowo Springs',
-  x0: 256,
-  x1: 414,
+  shift: -132,
+  x0: 124,
+  x1: 282,
   z0: -71,
   z1: 71,
   ground: 4.28,
   street: 4.4,
   walk: 4.44,
+};
+
+export const HARBOUR = {
+  x0: 150,
+  x1: 262,
+  z0: 96,
+  z1: 112,
+  ground: 1.6,
+  depth: 4.6,
 };
 
 export const LAYERS = {
@@ -75,6 +86,9 @@ export const ROAD = {
   halfWidth: 4.5,
   shoulder: 2.0,
   endX: 250,
+  east: 118,
+  rampWest: 150,
+  rampEast: 118,
   pullOff: { x0: -142, x1: -108, z0: 6.2, z1: 24 },
 };
 

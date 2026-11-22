@@ -78,7 +78,7 @@ function bakeSplat(heights) {
         for (const g of [GROUND.GRASS, GROUND.FOREST, GROUND.MUD]) w[g] *= 1 - k;
       }
       let hard = 0;
-      if (ax > BRIDGE.halfLength - 2 && x < TOWN.x1 && x > -WORLD.core - 30) {
+      if (ax > BRIDGE.halfLength - 2 && x < TOWN.x1 && x > -ROAD.endX - 30) {
         const edge = az - ROAD.halfWidth + (n2 - 0.5) * 0.9;
         hard = Math.max(hard, 1 - smooth(0.4, 2.9, edge));
       }
@@ -102,7 +102,7 @@ function bakeSplat(heights) {
         for (let k = 0; k < 8; k++) s0 += w[k];
         wild = s0 > 0.0001 ? (w[GROUND.GRASS] + w[GROUND.FOREST] * 0.35) / s0 : 0;
         town = 1 - smooth(-3, 1.5, townSigned(x, z) + (n2 - 0.5) * 3);
-        const yard = town > 0 && inYard(x, z) ? 1 - smooth(0.3, 0.7, n2 * 0.6 + n1 * 0.5) * 0.4 : 0;
+        const yard = town > 0 && inYard(x - TOWN.shift, z) ? 1 - smooth(0.3, 0.7, n2 * 0.6 + n1 * 0.5) * 0.4 : 0;
         const bare = town * (1 - yard);
         for (let k = 0; k < 8; k++) w[k] *= 1 - town;
         w[GROUND.GRAVEL] += bare * 0.2 * smooth(0.55, 0.8, n1);
@@ -372,6 +372,22 @@ export async function createTerrain({ assets, lighting, physics, scene }) {
     mesh.receiveShadow = true;
     mesh.castShadow = false;
     mesh.matrixAutoUpdate = false;
+    group.add(mesh);
+  }
+  {
+    const a = WORLD.half;
+    const b = 4200;
+    const y = hAt(0, 0);
+    const corners = [[-a, -a], [a, -a], [a, a], [-a, a], [-b, -b], [b, -b], [b, b], [-b, b]];
+    const apron = new THREE.BufferGeometry();
+    apron.setAttribute('position', new THREE.BufferAttribute(new Float32Array(corners.flatMap(([x, z]) => [x, y, z])), 3));
+    apron.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(corners.flatMap(() => [0, 1, 0])), 3));
+    apron.setIndex([0, 5, 4, 0, 1, 5, 1, 6, 5, 1, 2, 6, 2, 7, 6, 2, 3, 7, 3, 4, 7, 3, 0, 4]);
+    const mesh = new THREE.Mesh(apron, material);
+    mesh.receiveShadow = false;
+    mesh.castShadow = false;
+    mesh.matrixAutoUpdate = false;
+    mesh.frustumCulled = false;
     group.add(mesh);
   }
   scene.add(group);

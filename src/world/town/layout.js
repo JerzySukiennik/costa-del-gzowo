@@ -1,5 +1,7 @@
-// Costa del Gzowo: Gzowo Springs street plan (streets, pavements, alleys, lots, plots, yards) and paved-ground heights.
+// Costa del Gzowo: Gzowo Springs street plan (streets, pavements, alleys, lots, plots, yards) and paved-ground heights, all in the town's own coordinates (see space.js for the shift to world coordinates).
 import { TOWN } from '../../config.js';
+
+const AREA = { x0: TOWN.x0 - TOWN.shift, x1: TOWN.x1 - TOWN.shift, z0: TOWN.z0, z1: TOWN.z1 };
 
 export const MAIN = { z: 0, half: 7, walk: 3.5, x0: 262, x1: 392, crown: 0.018 };
 export const CROSS = [
@@ -75,7 +77,7 @@ export function streetY(x, z) {
 }
 
 export function inTown(x, z, pad = 0) {
-  return x > TOWN.x0 - pad && x < TOWN.x1 + pad && z > TOWN.z0 - pad && z < TOWN.z1 + pad;
+  return x > AREA.x0 - pad && x < AREA.x1 + pad && z > AREA.z0 - pad && z < AREA.z1 + pad;
 }
 
 export function inYard(x, z) {

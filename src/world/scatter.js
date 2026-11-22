@@ -1,6 +1,6 @@
 // Costa del Gzowo: deterministic scattering helpers, placement rules and model baking for instancing.
 import * as THREE from 'three';
-import { BRIDGE, ROAD, WORLD } from '../config.js';
+import { BRIDGE, HARBOUR, ROAD, TOWN, WORLD } from '../config.js';
 import { heightAt, trackInfo } from './heightfield.js';
 
 export function rng(seed) {
@@ -22,6 +22,8 @@ export function clearOfBuilt(x, z, margin = 0) {
   if (x > p.x0 - 3 - margin && x < p.x1 + 3 + margin && z > p.z0 - 2 && z < p.z1 + 3 + margin) return false;
   const tr = trackInfo(x, z);
   if (tr.dist < tr.halfWidth + 1.2 + margin) return false;
+  if (x > TOWN.x0 - 8 - margin && x < TOWN.x1 + 8 + margin && z > TOWN.z0 - 8 - margin && z < TOWN.z1 + 8 + margin) return false;
+  if (x > HARBOUR.x0 - 10 - margin && x < HARBOUR.x1 + 10 + margin && z > TOWN.z1 - margin && z < HARBOUR.z1 + 4) return false;
   return true;
 }
 

@@ -2,7 +2,10 @@
 import * as THREE from 'three';
 import { TOWN } from '../../config.js';
 import { GROUPS, groups } from '../../core/physics.js';
-import { heightAt } from '../heightfield.js';
+import { heightAt as worldHeightAt } from '../heightfield.js';
+import { TOWN_OFFSET } from './space.js';
+
+const heightAt = (x, z) => worldHeightAt(x + TOWN_OFFSET.x, z + TOWN_OFFSET.z);
 import { variantsOf, instancedVariant } from '../scatter.js';
 import { L, Surface, CHANNELS } from './kit.js';
 import { CROSS, PLAZA, streetY } from './layout.js';
@@ -930,7 +933,7 @@ export async function buildFurniture(T) {
         if (!force && item.body.isSleeping()) return;
         const t = item.body.translation();
         const r = item.body.rotation();
-        pos.set(t.x, t.y, t.z);
+        pos.set(t.x - TOWN_OFFSET.x, t.y, t.z - TOWN_OFFSET.z);
         quat.set(r.x, r.y, r.z, r.w);
         m4.compose(pos, quat, one).multiply(off.makeTranslation(0, kind.offset, 0));
         for (const mesh of kind.meshes) mesh.setMatrixAt(i, m4);

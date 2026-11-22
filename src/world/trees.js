@@ -461,7 +461,7 @@ export async function createTrees(ctx, options = {}) {
     if (trunkRadius) physics.staticCylinder(x, y - 1, y + 4.5, z, trunkRadius, 'wood');
   };
 
-  const heroSpots = [[-141, 37], [-97, 34], [-72, -25], [-53, 46], [-61, -60], [62, 35], [75, -31], [119, -27], [-152, -31], [104, 44], [-30, 118], [44, -96]];
+  const heroSpots = [[-141, 37], [-97, 34], [-72, -25], [-53, 46], [-61, -60], [62, 35], [75, -31], [96, -44], [-152, -31], [92, 54], [-30, 118], [44, -96]];
   for (const [x, z] of heroSpots) addTree([[jacNear, 0], [jacFar, 42]], jacImpostors, 84, x, z, 0.52 + random() * 0.26, 0.5);
   const taken = heroSpots.map(([x, z]) => ({ x, z }));
   const far = (x, z, d) => taken.every((t) => (t.x - x) ** 2 + (t.z - z) ** 2 > d * d);

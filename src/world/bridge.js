@@ -159,7 +159,7 @@ export async function createBridge({ assets, lighting, physics, scene, noise }) 
   const group = new THREE.Group();
   group.name = 'bridge';
 
-  const road = new THREE.Mesh(asphaltStrip(-ROAD.endX - 12, ROAD.endX + 12, 2), mat.asphalt);
+  const road = new THREE.Mesh(asphaltStrip(-ROAD.endX - 12, ROAD.east + 12, 2), mat.asphalt);
   road.receiveShadow = true;
   road.matrixAutoUpdate = false;
   group.add(road);
@@ -168,7 +168,7 @@ export async function createBridge({ assets, lighting, physics, scene, noise }) 
   const skirt = [];
   for (const s of [-1, 1]) {
     for (const sx of [-1, 1]) {
-      for (let x = L; x < ROAD.endX + 12; x += 4) {
+      for (let x = L; x < (sx > 0 ? ROAD.east : ROAD.endX) + 12; x += 4) {
         const xa = sx > 0 ? x : -x - 4;
         const zEdge = s * ROAD.halfWidth;
         const prof = s > 0 ? [[zEdge, -CROWN * ROAD.halfWidth - 0.3], [zEdge + 0.02, -CROWN * ROAD.halfWidth - 0.3], [zEdge + 0.02, -CROWN * ROAD.halfWidth], [zEdge, -CROWN * ROAD.halfWidth]] : [[zEdge - 0.02, -CROWN * ROAD.halfWidth - 0.3], [zEdge, -CROWN * ROAD.halfWidth - 0.3], [zEdge, -CROWN * ROAD.halfWidth], [zEdge - 0.02, -CROWN * ROAD.halfWidth]];

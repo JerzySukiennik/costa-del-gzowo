@@ -1,6 +1,6 @@
 // Costa del Gzowo: roadside props (cones, barriers, signs, road-closed ends, pull-off clutter, buoys, utility poles) with physics.
 import * as THREE from 'three';
-import { BRIDGE, ROAD, WORLD } from '../config.js';
+import { BRIDGE, ROAD, WORLD, TOWN } from '../config.js';
 import { GROUPS, groups } from '../core/physics.js';
 import { heightAt, roadY } from './heightfield.js';
 import { extrudeX, box, placed, merge, solid } from './geometry.js';
@@ -329,7 +329,7 @@ export async function createProps(ctx) {
   const poleParts = [];
   const wireParts = [];
   const zPole = -(ROAD.halfWidth + 9.5);
-  const poleXs = [-246, -200, -154, -108, -62, 62, 108, 154, 200, 246];
+  const poleXs = [-246, -200, -154, -108, -62, 62, TOWN.shift + 246];
   const tops = poleXs.map((x) => {
     const base = heightAt(x, zPole);
     poleParts.push(placed(new THREE.CylinderGeometry(0.11, 0.16, 10.4, 10), x, base + 5.0, zPole));

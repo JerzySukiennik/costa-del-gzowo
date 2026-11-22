@@ -1,5 +1,7 @@
 // Costa del Gzowo: where Gzowo Springs sits in the world; the street plan in layout.js is written in the town's own coordinates and converts to world coordinates through here.
-export const TOWN_OFFSET = { x: 0, z: 0 };
+import { TOWN } from '../../config.js';
+
+export const TOWN_OFFSET = { x: TOWN.shift, z: 0 };
 
 export const toWorldX = (x) => x + TOWN_OFFSET.x;
 export const toWorldZ = (z) => z + TOWN_OFFSET.z;

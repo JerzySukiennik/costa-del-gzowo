@@ -12,7 +12,7 @@ export const TUNE = {
   turnAccel: 8.2, yawRate: 1.2, climb: 9, boostClimb: 13.5, sink: 7.5, climbGain: 2.4,
   drag: 0.0012, dragUp: 0.006, attitude: 4.0, blend: 8.5, maxTilt: 0.78, ceiling: 560, waterFloor: 1.1, clearance: 7,
 };
-const EDGE = WORLD.half - 40;
+const EDGE = WORLD.bound - 60;
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const edgePush = (p, v) => {
   const over = Math.abs(p) - EDGE;
