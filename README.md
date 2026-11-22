@@ -23,6 +23,7 @@ python3 Niepotrzebne/devserver.py 8905
 | C | | camera distance |
 | R | | reset car (respawns it when flooded) |
 | M | map and menu | map and menu |
+| P | photo mode | photo mode |
 | Esc | pause | pause |
 
 ## Gzowo Springs
@@ -58,6 +59,18 @@ Opening the game puts you in a shared world with up to three other players (a fu
 
 A tuning tool that exists only when the game runs on localhost; the public site ships the default look without it. Press O in the game (or Menu, Settings, Look editor) to open a live panel while the game keeps running. It has thirteen ready-made looks (Costa, Golden, Original, Blockbuster, Vice, Kodak 35, Postcard, Sunset, Dream, Noir, Documentary, VHS 2003, Arcade) and sliders for colour (exposure, contrast, saturation, warmth, split toning, faded blacks), lens (bloom, glare, halation, anamorphic streaks, sun flare, depth of field, vignette, colour fringes, distortion, sharpness), film (grain, cinema bars, scanlines, flicker, motion blur) and camera feel (field of view, speed rush, shake, lean into corners, distance, handheld sway, variable focal length). With variable focal length the lens goes long when you stand still and wide when you run or drive fast, and the camera moves back or in so the subject keeps its size while the background compresses or opens up. The choice is saved in the browser. "Hold to compare" shows the original look, "Copy settings" puts the current values on the clipboard. The looks live in `src/render/look.js`.
 
+## The island
+
+The map is one island with an irregular coast, cut in two by the river strait under the bridge: the west half is nature (parking pull-off, meadow, forest, hills), the east half holds Gzowo Springs, which starts right where the bridge approach ends, with a harbour bay on its sunny side. Open sea runs to the horizon (the water surface follows the camera out to 3.6 km and the seabed continues past the terrain grid), and the flying boundary is 1.4 km out. The coast is `coastDistance()` in `src/world/heightfield.js`; the town is still written in its own coordinates (`src/world/town/layout.js`) and moved into place as one piece by `TOWN.shift` (`src/world/town/space.js`).
+
+## Time of day
+
+Golden hour fades through a red sunset into a moonlit night with stars and back, on an 18 minute clock taken from the wall time so every player sees the same sky. The sun does not travel: only its strength and colour change (and the sky, fog, grass, distant trees and grade with it), so shadows and baked data stay valid. Settings has "Time of day" (Day and night, Golden hour, Night); `?time=golden` pins it. Headlights come on by themselves at night.
+
+## Photo mode
+
+P stops time and frees the camera (W A S D, Q and E, Shift, the wheel zooms). The panel has the looks, field of view, tilt, background blur with a focus distance, the time of day, and a size: Screen, 4K (3840 x 2160), 4K tall (2160 x 3840) or square. A frame shows the crop. Enter renders 41 accumulated frames at that size (optionally with Cinematic detail) and saves a PNG.
+
 ## Quality and speed
 
 Six quality levels (Low, Medium, High, Ultra, Cinematic, Extreme) are defined in `src/render/quality.js` and switch live from the menu: render resolution, shadow map size, effect sample counts, tree and plant draw distances, grass reach and density, and the reflection resolution all change without a reload (only the water simulation size is taken at load). Cinematic renders at the full screen resolution (1.3x supersampling on ordinary screens), uses 4K shadow cascades that all update every frame, more ambient occlusion, fog and motion blur samples, a full-resolution reflection every frame, 512 px tree impostors and longer draw distances. Extreme goes further on every count (1.6x supersampling on ordinary screens, shadows out to 320 m, real tree models out to roughly 200 m, the widest grass and plant range, the most effect samples). Low cuts resolution, draw distances, grass density, shadow map size and the reflection.
@@ -71,7 +84,7 @@ Speed-ups that keep the picture, each with its own switch (`?speedups=0` starts 
 
 Trees pick their level of detail by size on screen, so a long lens no longer magnifies impostors. The far forest, which used to be impostors only, turns its nearest trees into real models, gets trunk colliders around the player, and its impostors cast shadows.
 
-A local panel (P on localhost, or Menu, Settings) has quality buttons (keys 1 to 6), the speed-up switches, a live readout (frame time, resolution, triangles, draw calls) and a benchmark that times six fixed views with the speed-ups off and on. `node Niepotrzebne/tools/bench.mjs <url> <out.json> q=ultra ab=1` runs the same views in headless Chrome and can also list triangles per pass (`counts=1`), the cost of single effects (`probe=1`) and the processor time split (`cpu=1`).
+A local panel (I on localhost, or Menu, Settings) has quality buttons (keys 1 to 6), the speed-up switches, a live readout (frame time, resolution, triangles, draw calls) and a benchmark that times six fixed views with the speed-ups off and on. `node Niepotrzebne/tools/bench.mjs <url> <out.json> q=ultra ab=1` runs the same views in headless Chrome and can also list triangles per pass (`counts=1`), the cost of single effects (`probe=1`) and the processor time split (`cpu=1`).
 
 ## Music
 
