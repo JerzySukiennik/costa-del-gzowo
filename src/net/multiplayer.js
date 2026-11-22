@@ -1,4 +1,4 @@
-// Costa del Gzowo: multiplayer session (joins a shared world, shares the vehicle fleet through per-vehicle ownership, broadcasts what this player simulates, shows the other players and their name tags).
+// Costa del Gzowo: multiplayer session (joins a shared world, shares the vehicle fleet through per-vehicle ownership, broadcasts what this player simulates and their race standing, shows the other players and their name tags).
 import * as THREE from 'three';
 import { loadBackend } from './backend.js';
 import { joinWorld } from './lobby.js';
@@ -10,6 +10,8 @@ import { encode, decode, PARTS, FLAG, VFLAG } from './protocol.js';
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const byte = (x) => clamp(Math.round(x * 255), 0, 255);
 const TURN = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+const CLAIMED = 10;
+const PER_PACKET = 9;
 
 export async function createMultiplayer(ctx, play, profile, hooks = {}) {
   const backend = await loadBackend();
@@ -32,7 +34,20 @@ export async function createMultiplayer(ctx, play, profile, hooks = {}) {
   let sinceSend = 0;
   let entering = -1;
 
-  const authority = (k) => (owners[k] >= 0 && present.has(owners[k]) ? owners[k] : -1);
+  function driverOf(item) {
+    let slot = play.vehicle === item && (play.game.mode === 'car' || entering === item.index) ? lobby.slot : -1;
+    for (const remote of remotes.values()) {
+      const s = remote.now;
+      if (s && s.seat === 1 && s.vehicle === item.index && (slot < 0 || remote.slot < slot)) slot = remote.slot;
+    }
+    return slot;
+  }
+
+  function authority(k) {
+    if (k < CLAIMED) return owners[k] >= 0 && present.has(owners[k]) ? owners[k] : -1;
+    const driver = driverOf(fleet[k]);
+    return driver >= 0 ? driver : Math.min(...present, lobby.slot);
+  }
 
   function setRemote(item, on) {
     if (item.remote === on) return;
@@ -57,7 +72,7 @@ export async function createMultiplayer(ctx, play, profile, hooks = {}) {
   }
 
   function claim(item) {
-    if (owners[item.index] === lobby.slot) return;
+    if (item.index >= CLAIMED || owners[item.index] === lobby.slot) return;
     db.runTransaction(ref(`${lobby.base}/vehicles/${item.index}`), (current) => {
       if (current && current.owner !== lobby.slot && present.has(current.owner) && item.driver === current.owner) return undefined;
       return { owner: lobby.slot, uid: backend.uid };
@@ -114,7 +129,8 @@ export async function createMultiplayer(ctx, play, profile, hooks = {}) {
       if (!packet || !remote) return;
       const now = performance.now();
       remote.push(packet.player, now);
-      for (const record of packet.vehicles) if (record.index < fleet.length && owners[record.index] === slot) tracks[record.index].push(record, now);
+      remote.race = packet.race;
+      for (const record of packet.vehicles) if (record.index < fleet.length && authority(record.index) === slot) tracks[record.index].push(record, now);
     },
     onLink(slot, kind) {
       const remote = remotes.get(slot);
@@ -182,6 +198,7 @@ export async function createMultiplayer(ctx, play, profile, hooks = {}) {
       const w = c.body.angvel();
       const asleep = !c.state.occupied && c.velocity.lengthSq() < 0.004 && w.x * w.x + w.y * w.y + w.z * w.z < 0.003 && !(item.damage.state.burning > 0);
       if (asleep && now - sentAt[item.index] < 600 + item.index * 40) continue;
+      if (vehicles.length >= PER_PACKET && !c.state.occupied) continue;
       sentAt[item.index] = now;
       vehicles.push(record(item));
     }
@@ -249,6 +266,21 @@ export async function createMultiplayer(ctx, play, profile, hooks = {}) {
     setProfile(next) {
       return lobby.setProfile(next);
     },
+    clock() {
+      return backend.now();
+    },
+    racers() {
+      const list = [];
+      for (const remote of remotes.values()) {
+        const s = remote.now;
+        if (!s) continue;
+        const r = remote.race;
+        const item = s.seat > 0 ? fleet[s.vehicle] : null;
+        const at = item ? item.model.group.position : s;
+        list.push({ slot: remote.slot, name: remote.profile.name, course: r ? r.course : -1, phase: r ? r.phase : 0, cp: r ? r.cp : 0, startAt: r ? r.startAt : 0, time: r ? r.time : 0, x: at.x, z: at.z });
+      }
+      return list;
+    },
     claim(item) {
       entering = item.index;
       claim(item);
@@ -287,6 +319,7 @@ export async function createMultiplayer(ctx, play, profile, hooks = {}) {
         } else item.passenger = remote.slot;
       }
       for (const item of fleet) {
+        if (item.index >= CLAIMED) setRemote(item, authority(item.index) !== lobby.slot);
         if (!item.remote) continue;
         const latest = tracks[item.index].latest;
         if (latest) applyRemote(item, latest, dt);
@@ -296,7 +329,7 @@ export async function createMultiplayer(ctx, play, profile, hooks = {}) {
       if (sendIn <= 0) {
         sendIn = 1 / NET.sendHz;
         const state = capture(now);
-        mesh.send(encode(state.player, state.vehicles, seq++, now), sinceSend);
+        mesh.send(encode(state.player, state.vehicles, seq++, now, ctx.races ? ctx.races.net() : null), sinceSend);
         sinceSend = 0;
       }
       if (tags) tags.update(camera, remotes);

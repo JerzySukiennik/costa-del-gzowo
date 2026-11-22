@@ -1,20 +1,22 @@
-// Costa del Gzowo: the state packet every player broadcasts (own character plus every shared vehicle they currently simulate) and its decoder.
+// Costa del Gzowo: the state packet every player broadcasts (own character, race standing, plus every shared vehicle they currently simulate) and its decoder.
 export const KINDS = ['convertible', 'roadster', 'heli', 'cybertruck', 'speedboat', 'foilboat', 'diver', 'yacht'];
 export const PARTS = ['frontBumper', 'rearBumper', 'hood', 'trunk', 'doorFL', 'doorFR'];
 export const FLAG = { GROUNDED: 1, SWIM: 2 };
 export const VFLAG = { BURNING: 1, EXPLODED: 2, ROTOR_BROKEN: 4, OCCUPIED: 8, BEAMS: 16, BRAKE: 32, REVERSE: 64 };
 const HEAD = 8;
 const PLAYER = 22;
+const RACE = 12;
+const VERSION = 3;
 const RECORD = 48;
 
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const i16 = (x, scale) => clamp(Math.round(x * scale), -32767, 32767);
 const u8 = (x) => clamp(Math.round(x * 255), 0, 255);
 
-export function encode(player, vehicles, seq, time) {
-  const buffer = new ArrayBuffer(HEAD + PLAYER + RECORD * vehicles.length);
+export function encode(player, vehicles, seq, time, race) {
+  const buffer = new ArrayBuffer(HEAD + PLAYER + RACE + RECORD * vehicles.length);
   const d = new DataView(buffer);
-  d.setUint8(0, 2);
+  d.setUint8(0, VERSION);
   d.setUint8(1, vehicles.length);
   d.setUint16(2, seq & 0xffff, true);
   d.setUint32(4, time >>> 0, true);
@@ -32,6 +34,14 @@ export function encode(player, vehicles, seq, time) {
   d.setInt8(o + 20, clamp(Math.round(player.steer * 127), -127, 127));
   d.setUint8(o + 21, u8(player.throttle));
   o += PLAYER;
+  if (race && race.course >= 0) {
+    d.setUint8(o, race.course + 1);
+    d.setUint8(o + 1, race.phase);
+    d.setUint8(o + 2, clamp(race.cp, 0, 255));
+    d.setUint32(o + 4, race.startAt >>> 0, true);
+    d.setUint32(o + 8, race.time >>> 0, true);
+  }
+  o += RACE;
   for (const v of vehicles) {
     d.setUint8(o, v.index);
     d.setUint8(o + 1, v.vflags);
@@ -51,10 +61,10 @@ export function encode(player, vehicles, seq, time) {
 }
 
 export function decode(buffer) {
-  if (!buffer || buffer.byteLength < HEAD + PLAYER) return null;
+  if (!buffer || buffer.byteLength < HEAD + PLAYER + RACE) return null;
   const d = new DataView(buffer);
   const count = d.getUint8(1);
-  if (d.getUint8(0) !== 2 || buffer.byteLength !== HEAD + PLAYER + RECORD * count) return null;
+  if (d.getUint8(0) !== VERSION || buffer.byteLength !== HEAD + PLAYER + RACE + RECORD * count) return null;
   const time = d.getUint32(4, true);
   let o = HEAD;
   const player = {
@@ -63,6 +73,8 @@ export function decode(buffer) {
     vy: d.getInt8(o + 18) / 4, wade: d.getUint8(o + 19) / 255, steer: d.getInt8(o + 20) / 127, throttle: d.getUint8(o + 21) / 255,
   };
   o += PLAYER;
+  const race = { course: d.getUint8(o) - 1, phase: d.getUint8(o + 1), cp: d.getUint8(o + 2), startAt: d.getUint32(o + 4, true), time: d.getUint32(o + 8, true) };
+  o += RACE;
   const vehicles = [];
   for (let n = 0; n < count; n++) {
     const extra = new Uint8Array(8);
@@ -75,5 +87,5 @@ export function decode(buffer) {
     });
     o += RECORD;
   }
-  return { time, seq: d.getUint16(2, true), player, vehicles };
+  return { time, seq: d.getUint16(2, true), player, race, vehicles };
 }

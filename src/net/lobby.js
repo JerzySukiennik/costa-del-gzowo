@@ -8,7 +8,7 @@ export async function joinWorld(backend, profile, onPlayers) {
   const entry = () => ({ uid, pid, ts: db.serverTimestamp(), name: clean(profile.name, 16) || 'Player', car: clean(profile.car, 16) || 'convertible', avatar: clean(profile.avatar, 16) || 'default' });
   let world = null;
   let slot = -1;
-  for (const w of NET.worlds) {
+  for (const w of NET.worlds.includes(profile.world) ? [profile.world] : NET.worlds) {
     const snap = await db.get(ref(`${NET.root}/worlds/${w}/slots`));
     const slots = snap.val() || {};
     for (let n = 0; n < NET.maxPlayers && slot < 0; n++) {

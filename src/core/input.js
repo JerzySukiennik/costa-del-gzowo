@@ -1,4 +1,4 @@
-// Costa del Gzowo: keyboard and pointer-lock mouse input with edge detection.
+// Costa del Gzowo: keyboard and pointer-lock mouse input with edge detection and a list of keys that can be silenced (a race holding everyone at the line).
 export function createInput(canvas) {
   const down = new Set();
   const pressed = new Set();
@@ -28,13 +28,14 @@ export function createInput(canvas) {
     mouse.wheel += Math.sign(e.deltaY);
     e.preventDefault();
   }, { passive: false });
-  const key = (...codes) => codes.some((c) => down.has(c));
+  const muted = new Set();
+  const key = (...codes) => codes.some((c) => down.has(c) && !muted.has(c));
   return {
     mouse,
     down,
     key,
     hit(...codes) {
-      return codes.some((c) => pressed.has(c));
+      return codes.some((c) => pressed.has(c) && !muted.has(c));
     },
     axis(neg, pos) {
       return (key(...pos) ? 1 : 0) - (key(...neg) ? 1 : 0);
@@ -44,6 +45,10 @@ export function createInput(canvas) {
       mouse.dx = 0;
       mouse.dy = 0;
       mouse.wheel = 0;
+    },
+    mute(codes) {
+      muted.clear();
+      if (codes) for (const c of codes) muted.add(c);
     },
     press(code) {
       pressed.add(code);

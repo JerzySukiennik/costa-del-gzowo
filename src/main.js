@@ -34,6 +34,7 @@ import { createScreens } from './ui/screens.js';
 import { AVATARS } from './player/avatars.js';
 import { VEHICLES } from './vehicle/vehicles.js';
 import { createNpcs } from './npc/npcs.js';
+import { createRaces } from './race/race.js';
 
 const canvas = document.getElementById('view');
 const params = new URLSearchParams(location.search);
@@ -197,6 +198,7 @@ async function boot() {
     console.warn('Pedestrians and traffic unavailable.', error);
     return null;
   });
+  ctx.races = createRaces(ctx, play);
   const look = createLook(null, lookTools);
   const useLook = (values) => {
     pipeline.look = values;
@@ -255,7 +257,7 @@ async function boot() {
       play.hud.net('Online', others.length ? others.map((p) => p.name).join(', ') : 'Nobody else here yet');
     };
     import('./net/multiplayer.js')
-      .then(({ createMultiplayer }) => createMultiplayer(ctx, play, { name, car, avatar }, { tags, onPlayers }))
+      .then(({ createMultiplayer }) => createMultiplayer(ctx, play, { name, car, avatar, world: params.get('world') }, { tags, onPlayers }))
       .then((net) => {
         const p = play.player.state.position;
         if (net.slot > 0 && play.game.mode === 'foot' && Math.hypot(p.x - SPAWN.player.x, p.z - SPAWN.player.z) < 2) {
@@ -492,6 +494,7 @@ async function boot() {
     if (photo && photo.active) ctx.grass.update(camera.position);
     else {
       updateFade(dt);
+      ctx.races.update(dt, mode === 'playing');
       play.update(dt, elapsed);
       if (ctx.npc) ctx.npc.update(dt, elapsed);
       if (play.game.cinematic) {

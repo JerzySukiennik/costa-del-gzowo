@@ -44,7 +44,7 @@ export async function createGame(ctx) {
   const rig = createCameraRig({ camera, physics });
   rig.rig.yaw = SPAWN.player.yaw;
 
-  const game = { mode: 'foot', transition: null, beams: false, water: null, time: 0, ride: null };
+  const game = { mode: 'foot', transition: null, beams: false, water: null, time: 0, ride: null, hold: false };
   for (const item of fleet) item.bindEntry({ character, player, rig, game, groundBelow, onSeated: () => (exitHint = 4) });
   let entry = vehicle.entry;
   const moveInput = { x: 0, z: 0, sprint: false, jump: false };
@@ -269,9 +269,9 @@ export async function createGame(ctx) {
     moveInput.sprint = input.key('ShiftLeft', 'ShiftRight');
     moveInput.jump = game.mode === 'foot' && input.hit('Space');
     car.controls.throttle = inCar && fw > 0 ? 1 : 0;
-    car.controls.brake = inCar && fw < 0 ? 1 : 0;
+    car.controls.brake = inCar && (fw < 0 || game.hold) ? 1 : 0;
     car.controls.steer = inCar ? -strafe : 0;
-    car.controls.handbrake = inCar && input.key(carKeys.handbrake);
+    car.controls.handbrake = inCar && (game.hold || input.key(carKeys.handbrake));
 
     doorWorld.copy(entry.doorLocal);
     carModel.group.localToWorld(doorWorld);
