@@ -15,13 +15,15 @@ python3 Niepotrzebne/devserver.py 8905
 | W A S D | move | throttle, steer, brake / reverse |
 | Mouse | camera | orbit camera |
 | Shift | sprint | |
-| Space | jump | handbrake |
+| Space | jump, climb out of the water at a ladder or a low dock | handbrake |
 | F | enter car | exit car |
 | Q E | | previous / next radio station |
 | T | | open / close the roof |
 | H | | headlights |
 | C | | camera distance |
 | R | | reset car (respawns it when flooded) |
+| Enter | | start a race at a beacon |
+| Backspace | | leave a race |
 | M | map and menu | map and menu |
 | P | photo mode | photo mode |
 | Esc | pause | pause |
@@ -49,11 +51,12 @@ Six vehicles are parked by the bridge: two convertibles, two Roadsters and two K
 
 ## Multiplayer
 
-Opening the game puts you in a shared world with up to three other players (a full world opens the next one). Everyone sees the same six vehicles. Whoever drives a vehicle simulates it and the others see it move, collide with it and can ride along: press F at the door of a vehicle somebody is driving. Your name is set in the menu under Settings, where the list of players is too.
+Opening the game puts you in a shared world with up to three other players (a full world opens the next one). Everyone sees the same eleven vehicles. Whoever drives a vehicle simulates it and the others see it move, collide with it and can ride along: press F at the door of a vehicle somebody is driving. Your name is set in the menu under Settings, where the list of players is too.
 
 - `src/net/`: the Firebase loader, the world lobby (four slots per world), WebRTC links between players with a slow database relay as a fallback, the state packet, vehicle ownership and the remote characters.
 - The Firebase Realtime Database is used only to find each other, to exchange connection offers and to record who simulates which vehicle. Its rules for the `costa` branch are in `Niepotrzebne/net/costa.rules.json`.
-- `?solo=1` turns multiplayer off. `Niepotrzebne/tools/mp-test.mjs` runs two real clients against each other.
+- `?solo=1` turns multiplayer off, `?world=w8` picks a world (used by the tests so they stay out of the worlds people play in). `Niepotrzebne/tools/mp-test.mjs` runs two real clients against each other.
+- The database rules let players claim vehicles 0 to 9 only; vehicles past the tenth (the yacht) are shared without a claim: whoever drives one simulates it, otherwise the player in the lowest slot does.
 
 ## Look editor
 
@@ -62,6 +65,12 @@ A tuning tool that exists only when the game runs on localhost; the public site 
 ## The island
 
 The map is one island with an irregular coast, cut in two by the river strait under the bridge: the west half is nature (parking pull-off, meadow, forest, hills), the east half holds Gzowo Springs, which starts right where the bridge approach ends, with a harbour bay on its sunny side. Open sea runs to the horizon (the water surface follows the camera out to 3.6 km and the seabed continues past the terrain grid), and the flying boundary is 1.4 km out. The coast is `coastDistance()` in `src/world/heightfield.js`; the town is still written in its own coordinates (`src/world/town/layout.js`) and moved into place as one piece by `TOWN.shift` (`src/world/town/space.js`).
+
+## Races
+
+Five courses start at glowing beacons in the world (`src/race/`): Bridge Sprint (road, west island to the far end of Main Street), Sawgrass Rally (off-road loop on the west island), Strait Run and Island Lap (boats, from the harbour bay through the strait under the bridge, the lap goes right round the town island) and Sky Rings (helicopter or Roadster, twelve hoops including one under the bridge). Drive the right kind of vehicle into a beacon and press Enter: you are held at the line, Enter again starts a four second countdown, then each gate lights up in turn with the next one dimmed behind it. The clock, the gate count and the distance sit in the top right corner; best times are kept in the browser.
+
+With other players in the session, everyone who lines up at the same beacon starts together: any of them pressing Enter starts the countdown for all, on the clock the players share, and the standing and the results table show every racer. Race state travels in the regular player packet, so no extra database access is needed. Backspace leaves a race. `Niepotrzebne/tools/mp-race.mjs` runs two real clients through a shared race.
 
 ## Marina and boats
 
@@ -115,6 +124,7 @@ Two sources, picked automatically:
 - `src/water` river rendering and interaction (FFT ripples, GPU wave simulation, planar reflection, caustics, splash particles, underwater pass)
 - `src/vehicle` convertible (body, parts, interior, roof, dynamics, damage), entry choreography, vehicle registry, and `roadster/` (thruster car)
 - `src/player`, `src/camera` (chase rig and title cinematics), `src/audio` (sound mix, music, radio), `src/fx`, `src/ui` (HUD, title, pause and menu screens, radio switcher)
+- `src/race` race courses, markers and the race logic
 - `src/dev` fixed benchmark views
 - `Niepotrzebne/tools` asset fetching and model processing scripts, screenshots and the benchmark
 

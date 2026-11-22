@@ -1,4 +1,4 @@
-// Costa del Gzowo: race markers (start beacons with name boards, the gate to reach and the one after it) drawn as additive light, so they add no lamps and cast no shadows.
+// Costa del Gzowo: race markers (start beacons with name boards, the gate to reach and the one after it) drawn as additive light and glowing hoops, so they add no lamps and cast no shadows.
 import * as THREE from 'three';
 import { heightAt } from '../world/heightfield.js';
 import { COURSES, KINDS } from './courses.js';
@@ -32,11 +32,8 @@ function beam(height) {
   return fade(new THREE.CylinderGeometry(0.22, 0.22, height, 10, 8, true).translate(0, height / 2, 0), height, 1.1);
 }
 
-function hoop(radius) {
-  const g = new THREE.TorusGeometry(radius, 0.26, 10, 56);
-  const c = new Float32Array(g.attributes.position.count * 3).fill(1);
-  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
-  return g;
+function hoop() {
+  return new THREE.TorusGeometry(1, 0.06, 10, 64);
 }
 
 function board(title, subtitle) {
@@ -92,12 +89,13 @@ export function createMarkers(ctx) {
     const material = glow();
     const wall = new THREE.Mesh(shell(1, 1), material);
     const pole = new THREE.Mesh(beam(1), material);
-    const ring = new THREE.Mesh(hoop(1), material);
+    const solid = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false });
+    const ring = new THREE.Mesh(hoop(), solid);
     for (const mesh of [wall, pole, ring]) mesh.frustumCulled = false;
     group.add(wall, pole, ring);
     group.visible = false;
     root.add(group);
-    return { group, material, wall, pole, ring, tint: new THREE.Color(), level: 1 };
+    return { group, material, solid, wall, pole, ring, tint: new THREE.Color(), level: 1 };
   };
   const gates = [make(), make()];
   const from = new THREE.Vector3();
@@ -117,7 +115,7 @@ export function createMarkers(ctx) {
     g.pole.visible = !air;
     g.ring.visible = air;
     if (air) {
-      g.ring.scale.setScalar(radius);
+      g.ring.scale.setScalar(Math.min(radius, Math.max(2.4, point.y - 0.5)));
       g.group.lookAt(to.copy(point).multiplyScalar(2).sub(before));
     } else {
       g.group.rotation.set(0, 0, 0);
@@ -152,7 +150,11 @@ export function createMarkers(ctx) {
         s.material.color.copy(s.tint).multiplyScalar(day * 0.55 * beat);
         s.sign.material.color.copy(s.tint).multiplyScalar(0.55 + day * 0.5).addScalar(0.25);
       }
-      for (const g of gates) if (g.group.visible) g.material.color.copy(g.tint).multiplyScalar(day * g.level * (g.level === 1 ? beat : 1));
+      for (const g of gates) {
+        if (!g.group.visible) continue;
+        g.material.color.copy(g.tint).multiplyScalar(day * g.level * (g.level === 1 ? beat : 1));
+        g.solid.color.copy(g.tint).multiplyScalar((1.6 + day) * (g.level === 1 ? 1 : 0.45));
+      }
     },
   };
 }

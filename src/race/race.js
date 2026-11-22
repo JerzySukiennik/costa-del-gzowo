@@ -216,7 +216,7 @@ export function createRaces(ctx, play) {
       const kind = KINDS[course.kind];
       const fits = driving && kind.vehicles.includes(item.id) && !play.damage.state.exploded;
       if (!fits) {
-        setHint('', `${course.name}: bring ${kind.bring}`);
+        setHint('', driving || nearD < 6 ? `${course.name}: bring ${kind.bring}` : '');
         return;
       }
       const record = best[course.id] ? `   ·   best ${clockText(best[course.id])}` : '';
