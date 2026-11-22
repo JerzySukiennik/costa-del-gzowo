@@ -74,7 +74,7 @@ function arch(sign) {
 export async function build(ctx) {
   const shape = hullShape(SPEC);
   const surf = hullSurfaces(shape, { nu: 60, nb: 14, ns: 18, deckFrom: 0, camber: 0.08, flare: 0.8, bottomPow: 0.7 });
-  const model = createBoatModel(ctx, { id: 'yacht', glassTint: 0x04070a, glassBase: 0.5 });
+  const model = createBoatModel(ctx, { id: 'yacht', glassTint: 0x04070a, glassBase: 0.5, damageBox: [-14.5, 29, -1.7, 7] });
   model.cullRadius = 17;
   const b = new Batch();
   b.add(surf.bottom, [0.06, 0.065, 0.07, 0.45, 0, 0.3]);
@@ -115,8 +115,10 @@ export async function build(ctx) {
   for (const [x, z] of [[-2.3, 1.7], [-2.3, -1.7], [2.2, 1.35], [2.2, -1.35]]) b.add(at(cyl(0.06, 0.07, 2.3, 10), x, ROOF + 1.2, z, z > 0 ? -0.06 : 0.06, 0, x < 0 ? -0.05 : 0.08), F.steel);
   b.add(at(cyl(0.05, 0.05, 1.6, 8), -1.2, ROOF + 3.15, 0), F.steel);
   b.add(at(box(1.8, 0.08, 0.12, 0.03), -1.2, ROOF + 3.3, 0), F.white);
-  b.add(at(sphere(0.32, 1, 0.7, 1), -0.4, ROOF + 2.6, 0.8), F.white);
-  b.add(at(sphere(0.25, 1, 0.7, 1), -0.4, ROOF + 2.55, -0.8), F.white);
+  const rd = new Batch();
+  rd.add(at(sphere(0.32, 1, 0.7, 1), 0, 0.05, 0.8), F.white);
+  rd.add(at(sphere(0.25, 1, 0.7, 1), 0, 0, -0.8), F.white);
+  rd.add(at(cyl(0.05, 0.05, 0.3, 8), 0, -0.15, 0.8), F.steel);
   b.add(at(sphere(0.06), -1.2, ROOF + 3.95, 0), F.lamp, CH.WHITE);
   b.add(at(box(1.1, 0.9, 1.7, 0.12), 2.6, ROOF + 0.45, 0.2), [0.9, 0.9, 0.88, 0.14, 0, 1]);
   b.add(at(box(0.55, 0.02, 1.4, 0.01), 2.32, ROOF + 0.95, 0.2, 0, 0, -0.5), F.screen, CH.SCREEN);
@@ -128,7 +130,9 @@ export async function build(ctx) {
   b.add(at(box(2.8, 0.45, 0.5, 0.12), -9.6, 2.55, 0), F.cream);
   b.add(at(box(0.5, 0.45, 3.6, 0.12), -10.9, 2.55, 0), F.cream);
   b.add(at(box(1.6, 0.72, 1.0, 0.04), -9.6, 2.33, 0), F.teak, PAT.TEAK);
-  b.add(at(box(2.2, 0.12, 4.0, 0.04), X0 - 0.9, 0.42, 0), F.teak, PAT.TEAK);
+  const pb0 = new Batch();
+  pb0.add(at(box(2.2, 0.12, 4.0, 0.04), -0.9, 0, 0), F.teak, PAT.TEAK);
+  pb0.add(at(box(2.0, 0.22, 3.8, 0.05), -0.85, -0.16, 0), [0.92, 0.92, 0.9, 0.14, 0, 1]);
   for (let i = 0; i < 4; i++) b.add(at(box(0.4, 0.1, 2.4, 0.03), X0 - 0.2 + i * 0.36, 0.7 + i * 0.36, 0), F.teak, PAT.TEAK);
   for (const sign of [1, -1]) {
     const top = [];
@@ -146,7 +150,22 @@ export async function build(ctx) {
   }
   b.add(at(box(0.1, 0.1, 0.3, 0.02), X0 + 0.02, 1.5, 0), F.lamp, CH.WHITE);
   b.add(at(box(0.5, 0.02, 3.2, 0.01), X0 - 0.4, 0.36, 0), F.lamp, CH.FLOOD);
-  model.mesh(b.build());
+  model.setHull(model.mesh(b.build()));
+  const platform = model.pivot(X0, 0.42, 0);
+  model.mesh(pb0.build(), platform);
+  model.part('platform', platform, {
+    label: 'Swim platform', half: [1.1, 0.15, 2.0], mass: 90, float: true, limit: 1.4, tearAt: 2.5, bend: [0.15, 0.3],
+    zone: (lp) => (lp.x < X0 + 0.6 && lp.y < 1.4 ? 1 : 0),
+  });
+  const radar = model.pivot(-0.4, ROOF + 2.55, 0);
+  model.mesh(rd.build(), radar);
+  model.part('radar', radar, {
+    label: 'Radar dome', half: [0.35, 0.25, 0.8], mass: 25, float: true, limit: 0.8, tearAt: 1.5, bend: [0.4, 0.3],
+    zone: (lp) => (lp.y > ROOF + 1.6 ? 1 : 0),
+  });
+  model.lampAt(CH.RED, 7.8, DECK(7.8) + 0.1, -beam(tOf(7.8)));
+  model.lampAt(CH.GREEN, 7.8, DECK(7.8) + 0.1, beam(tOf(7.8)));
+  model.lampAt(CH.WHITE, X0, 1.5, 0);
   const ws = grid(16, 4, (u, v, p) => {
     const x = 2.6 + v * 0.55;
     const s = u * 2 - 1;
@@ -214,6 +233,8 @@ export async function build(ctx) {
     latLin: 0.5, latQuad: 1.2, latX: -2.0, steerMax: 0.6, steerRate: 0.7, vector: 0.35, rudder: 0.03,
     yawDamp: 0.9, rollDamp: 1.8, pitchDamp: 2.2, bank: 0.05, righting: 2.5, capsize: 0.3, mooring: 14,
     prop: [X0 + 1.6, -1.3, 0],
+    dentAt: 0.35, crushAt: 3.5, dentScale: 0.14, dentLimit: 0.6, holeAt: 1.0, breachScale: 0.3, engineHit: 0.06, shatterAt: 2.5, metal: false, chips: [0.9, 0.9, 0.88],
+    engine: [-9.5, 1.2, 0], burnTime: 20, blastBreach: 0.7, maxBreach: 0.9, floodTime: 300,
     colliders: [
       { points: new Float32Array(pts) },
       { points: new Float32Array(amaPts(1)) },

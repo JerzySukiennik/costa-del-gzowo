@@ -23,6 +23,7 @@ export function createBoatPhysics({ physics, model, spawn, input, design }) {
   const bottomY = -draft;
   const column = D.column ?? 1.2;
   const heave = RHO * G * area;
+  const floodMass = Math.max(1, (RHO * samples.reduce((t, q) => t + q[2], 0) * column * 1.15) / D.mass - 1 + 0.3);
   const dampArea = (D.heaveDamp ?? 0.5) * 2 * Math.sqrt(heave * D.mass) / area;
   const quad = D.accel / (D.top * D.top);
   const com = new THREE.Vector3(...(D.com || [0, 0, 0]));
@@ -48,6 +49,7 @@ export function createBoatPhysics({ physics, model, spawn, input, design }) {
     submersion: 0, flood: 0, stalled: false, airborne: false, onGround: 0, engineLoad: 0, waterDepth: 1, reverse: false, skid: 0, gForce: new THREE.Vector3(), inWater: true,
     readout: '0 KN', boat: true, planing: 0, foiling: 0, foilLift: 0, submerged: false, dive: 0, depth: 0, wet: 1, wash: 0, spray: 0, prop: 0, grounded: 0, boost: false,
     ballast: 0, diving: false, targetDepth: 2, pitch: 0, roll: 0, yawRate: 0, powerScale: 1, moored: true, health: 1,
+    breach: 0, leakX: 0, leakZ: 0, thrustScale: 1, foilsOff: false, canopyBroken: false, sunk: false, ingress: 0,
   };
   const controls = { throttle: 0, brake: 0, steer: 0, handbrake: false };
   const pos = new THREE.Vector3();
@@ -170,8 +172,9 @@ export function createBoatPhysics({ physics, model, spawn, input, design }) {
 
     let foilSub = 0;
     let foilFly = 0;
-    if (foils.length) {
+    if (foils.length && !state.foilsOff) {
       const fo = D.foil;
+      const clMax = fo.clMax * (1 - 0.45 * Math.min(1, state.foilBend || 0));
       const v2 = Math.max(0, vf) * Math.max(0, vf);
       const q = 0.5 * RHO * v2;
       const rideH = pos.y + bottomY - water0;
@@ -179,7 +182,7 @@ export function createBoatPhysics({ physics, model, spawn, input, design }) {
       for (const fl of foils) {
         local(fl.x, fl.y, fl.z, p);
         fl.sub = clamp((level(p.x, p.z) - p.y) / 0.3, 0, 1);
-        avail += q * fl.area * fo.clMax * fl.sub;
+        avail += q * fl.area * clMax * fl.sub;
         foilSub += fl.sub / foils.length;
       }
       const pitch = Math.asin(clamp(fwd.y, -1, 1));
@@ -188,12 +191,12 @@ export function createBoatPhysics({ physics, model, spawn, input, design }) {
       const wantLift = D.mass * (G + clamp((fo.ride - rideH) * fo.kp - vel.y * fo.kd, -6, 6));
       const share = avail > 1 ? clamp(wantLift / avail, 0, 1) : 0;
       for (const fl of foils) {
-        let cl = share * fo.clMax;
+        let cl = share * clMax;
         const pe = (fo.pitch - pitch) * fo.kPitch - ang.dot(right) * fo.kPitchD;
         if (fl.front) cl += clamp(pe * 0.4, -0.3, 0.3);
         else cl -= clamp(pe, -0.5, 0.5);
         if (fl.z) cl += Math.sign(fl.z) * clamp((roll - wantRoll) * fo.kRoll + ang.dot(fwd) * fo.kRollD, -0.35, 0.35);
-        cl = clamp(cl, 0, fo.clMax);
+        cl = clamp(cl, 0, clMax);
         fl.cl = cl;
         fl.lift = q * fl.area * cl * fl.sub;
         local(fl.x, fl.y, fl.z, p);
@@ -208,7 +211,7 @@ export function createBoatPhysics({ physics, model, spawn, input, design }) {
     }
 
     const hull = wet;
-    const plan = D.plane ? smooth(D.plane.v0, D.plane.v1, vf) * Math.min(1, hull * 1.5) : 0;
+    const plan = D.plane ? smooth(D.plane.v0, D.plane.v1, vf) * Math.min(1, hull * 1.5) * (1 - (dive ? state.ballast : 0)) : 0;
     state.planing = plan;
     if (D.plane && hull > 0.02) {
       local(com.x + D.plane.x, bottomY, 0, p);
@@ -239,12 +242,12 @@ export function createBoatPhysics({ physics, model, spawn, input, design }) {
     const top = diving && under > 0.5 ? dive.accel : D.accel;
     const cmd = fw > 0 ? fw * (boost ? D.boost : 1) : fw * D.reverse;
     thrustNow += (cmd - thrustNow) * (1 - Math.exp(-dt * D.spool));
-    const thrust = thrustNow * top * D.mass * bite * state.powerScale;
+    const thrust = thrustNow * top * D.mass * bite * state.powerScale * state.thrustScale * (1 - 0.85 * state.flood);
     const c = Math.cos(steer * D.vector);
     const sn = Math.sin(steer * D.vector);
     force((fh.x * c + rh.x * sn) * thrust, 0, (fh.z * c + rh.z * sn) * thrust, p.x, D.thrustAtCom ? comW.y : Math.min(p.y, comW.y), p.z);
     const rudderWet = Math.max(hull, foilSub, under);
-    const rudder = steer * D.rudder * vf * Math.abs(vf) * D.mass * rudderWet;
+    const rudder = steer * D.rudder * vf * Math.abs(vf) * D.mass * rudderWet * (1 - 0.6 * state.flood);
     force(rh.x * rudder, 0, rh.z * rudder, p.x, comW.y, p.z);
 
     const wy = ang.y;
@@ -253,7 +256,7 @@ export function createBoatPhysics({ physics, model, spawn, input, design }) {
     const rtAng = ang.dot(right);
     T.addScaledVector(fwd, -fwAng * D.rollDamp * I[0] * (0.3 + hull));
     T.addScaledVector(right, -rtAng * D.pitchDamp * I[2] * (0.3 + hull));
-    if (D.bank && !foils.length) T.addScaledVector(fwd, -D.bank * wy * Math.max(0, vf) * I[0] * hull * smooth(2, 8, vf));
+    if (D.bank && (!foils.length || state.foilsOff)) T.addScaledVector(fwd, -D.bank * wy * Math.max(0, vf) * I[0] * hull * smooth(2, 8, vf));
     const tilt = Math.acos(clamp(up.y, -1, 1));
     const right0 = smooth(D.capsize ?? 0.5, 1.6, tilt) * D.mass * G * (D.righting ?? 1.5);
     tq.set(up.z, 0, -up.x);
@@ -306,10 +309,22 @@ export function createBoatPhysics({ physics, model, spawn, input, design }) {
     body.applyImpulse({ x: F.x * dt, y: F.y * dt, z: F.z * dt }, true);
     body.applyTorqueImpulse({ x: T.x * dt, y: T.y * dt, z: T.z * dt }, true);
     if (pos.y < WORLD.waterLevel - 60) respawn();
+    let breach = state.breach;
+    if (dive && state.canopyBroken && under > 0.3) breach = Math.max(breach, 1.5);
+    const floodTime = D.floodTime * (dive && under > 0.3 ? 0.4 : 1);
+    state.ingress = breach > 0 && state.flood < 1 ? (breach * dt * (0.25 + 0.75 * Math.min(1, wet + sunk))) / floodTime : 0;
+    state.flood = Math.min(1, state.flood + state.ingress);
+    if (state.flood > 0) {
+      local(com.x + (state.leakX - com.x) * 0.25, bottomY, state.leakZ * 0.22, p);
+      const w = state.flood * floodMass * D.mass * G * (1 - ballast);
+      body.applyImpulseAtPoint({ x: 0, y: -w * dt, z: 0 }, { x: p.x, y: p.y, z: p.z }, true);
+      if (state.flood > 0.92) state.stalled = true;
+    }
+    state.sunk = state.flood > 0.5 && water0 - (pos.y + (D.topY ?? 0.8)) > 0.2 && !(dive && state.diving && !state.canopyBroken);
 
     const kn = Math.abs(vf) * 1.94384;
     const engine = Math.abs(thrustNow);
-    const flooded = tilt > 1.9 && sunk > 0.6;
+    const flooded = (tilt > 1.9 && sunk > 0.6) || state.sunk;
     state.submersion = flooded ? 1 : 0;
     Object.assign(state, {
       throttle: Math.max(0, fw), brake: Math.max(0, -fw), steerInput: turn, steer: (steer / D.steerMax) * 0.6, rpm: on ? 900 + engine * 5600 + Math.abs(vf) * 25 : 0, speed, forwardSpeed: vf,
@@ -320,6 +335,7 @@ export function createBoatPhysics({ physics, model, spawn, input, design }) {
     let mode = '';
     if (state.grounded > 0.3 && speed < 2) mode = '  AGROUND';
     else if (dive && ballast > 0.05) mode = state.submerged ? `  DEPTH ${Math.max(0, state.depth).toFixed(1)} m` : diving ? '  DIVING' : '  SURFACING';
+    else if (state.flood > 0.04) mode = state.sunk ? '  SUNK' : '  FLOODING';
     else if (foilFly > 0.5) mode = '  FOILING';
     else if (plan > 0.6) mode = '  PLANING';
     state.readout = `${Math.round(kn)} KN${mode}`;
@@ -343,6 +359,8 @@ export function createBoatPhysics({ physics, model, spawn, input, design }) {
     steer = 0;
     state.ballast = 0;
     state.diving = false;
+    state.flood = 0;
+    state.sunk = false;
     read();
   }
 

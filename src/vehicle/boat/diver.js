@@ -49,7 +49,9 @@ function canopy() {
 export async function build(ctx) {
   const shape = hullShape(SPEC);
   const surf = hullSurfaces(shape, { nu: 12, nb: 2, ns: 2, deckFrom: 0, camber: 0, flare: 1, bottomPow: 1 });
-  const model = createBoatModel(ctx, { id: 'diver', glassTint: 0x05080a, glassBase: 0.42 });
+  const model = createBoatModel(ctx, { id: 'diver', glassTint: 0x05080a, glassBase: 0.42, damageBox: [-3.8, 7.6, -0.6, 2.4] });
+  const TH = V(X0 + 0.4, -0.32, 0);
+  const tb = new Batch();
   model.cullRadius = 6;
   const b = new Batch();
   b.add(flat(surf.bottom), DARK);
@@ -78,9 +80,9 @@ export async function build(ctx) {
     b.add(at(box(0.18, 0.06, 0.03, 0.01), 0.6, -0.08, sign * 1.12), F.lamp, CH.FLOOD);
     b.add(at(box(0.18, 0.06, 0.03, 0.01), -2.0, -0.08, sign * 1.12), F.lamp, CH.FLOOD);
     const pod = V(X0 + 0.25, -0.32, sign * 0.78);
-    b.add(at(cyl(0.2, 0.17, 1.2, 8), pod.x + 0.35, pod.y, pod.z, 0, 0, Math.PI / 2), DARK);
-    b.add(at(cyl(0.21, 0.21, 0.06, 16, true), pod.x - 0.22, pod.y, pod.z, 0, 0, Math.PI / 2), F.lamp, CH.ACCENT);
-    b.add(at(box(0.6, 0.32, 0.06, 0.02), pod.x + 0.4, pod.y + 0.2, pod.z), DARK);
+    tb.add(at(cyl(0.2, 0.17, 1.2, 8), pod.x + 0.35 - TH.x, pod.y - TH.y, pod.z, 0, 0, Math.PI / 2), DARK);
+    tb.add(at(cyl(0.21, 0.21, 0.06, 16, true), pod.x - 0.22 - TH.x, pod.y - TH.y, pod.z, 0, 0, Math.PI / 2), F.lamp, CH.ACCENT);
+    tb.add(at(box(0.6, 0.32, 0.06, 0.02), pod.x + 0.4 - TH.x, pod.y + 0.2 - TH.y, pod.z), DARK);
   }
   const front = sheer(1);
   b.add(at(box(0.03, 0.04, 2 * beam(1) - 0.1, 0.01), L / 2 + 0.01, front - 0.1, 0), F.lamp, CH.WHITE);
@@ -102,12 +104,25 @@ export async function build(ctx) {
   b.add(at(box(2.6, 0.04, 2.1, 0.02), -0.5, 0.12, 0), [0.04, 0.04, 0.045, 0.8, 0, 0]);
   b.add(at(box(0.4, 0.3, 1.8, 0.04), 0.85, 0.78, 0, 0, 0, -0.5), DARK);
   b.add(at(box(0.22, 0.005, 0.8, 0.004), 0.75, 0.94, 0, 0, 0, -0.85), F.screen, CH.SCREEN);
-  model.mesh(b.build());
+  model.setHull(model.mesh(b.build()));
+  const thrusters = model.pivot(TH.x, TH.y, TH.z);
+  model.mesh(tb.build(), thrusters);
+  model.part('thrusters', thrusters, {
+    label: 'Thruster pods', half: [0.6, 0.25, 1.0], mass: 120, float: false, limit: 1.3, tearAt: 5.5, bend: [0.3, 0.25],
+    zone: (lp, below) => (lp.x < X0 + 1.0 && lp.y < 0.3 ? 1 : 0),
+    onBend: (car, d) => (car.state.thrustScale = Math.max(0.2, 1 - d * 0.5)),
+    onLose: (car) => (car.state.thrustScale = 0),
+    onRepair: (car) => (car.state.thrustScale = 1),
+  });
+  model.lampAt(CH.RED, 2.6, 0.7, -0.7);
+  model.lampAt(CH.GREEN, 2.6, 0.7, 0.7);
+  model.lampAt(CH.WHITE, L / 2, 0.55, 0);
+  model.lampAt(CH.FLOOD, L / 2, 0.15, 0);
   model.glassMesh(cp.geometry);
 
   const props = [];
   for (const sign of [1, -1]) {
-    const pr = model.pivot(X0 - 0.02, -0.32, sign * 0.78);
+    const pr = model.pivot(X0 - 0.02 - TH.x, 0, sign * 0.78, thrusters);
     const pb = new Batch();
     pb.add(propeller(0.15, 5).rotateZ(Math.PI / 2).rotateY(Math.PI / 2), DARK);
     model.mesh(pb.build(), pr, false);
@@ -162,6 +177,8 @@ export async function build(ctx) {
     latLin: 0.7, latQuad: 1.0, latX: -0.7, steerMax: 0.5, steerRate: 2.0, vector: 0.5, rudder: 0.0022,
     yawDamp: 2.0, rollDamp: 3.2, pitchDamp: 2.6, bank: 0.1, righting: 2, capsize: 0.35,
     prop: [X0 - 0.05, -0.32, 0],
+    dentAt: 1.0, crushAt: 9, dentScale: 0.045, dentLimit: 0.28, holeAt: 3.4, breachScale: 1.1, engineHit: 0.1, shatterAt: 5, metal: true, chips: [0.6, 0.6, 0.62],
+    engine: [-2.6, 0.55, 0], burnTime: 11, blastBreach: 1.6, maxBreach: 2, floodTime: 30,
     colliders: [{ points: hullPts }, { half: [1.9, 0.36, 0.7], at: [0.2, 1.26, 0] }],
     camera: { distance: 9, height: 1.9, ahead: 3, pitch: 0.17 },
     keys: { handbrake: 'KeyX', camera: 'KeyV' },
@@ -183,7 +200,12 @@ export async function build(ctx) {
   const fx = { halfLength: L / 2, halfBeam: 1.2, halfHeight: 0.8, spray: 1.4, sprayFrom: 0, sprayTo: 2.0, thrusters: [[X0 - 0.1, -0.32, 0.78], [X0 - 0.1, -0.32, -0.78]] };
   const toggle = {
     key: 'KeyG',
-    run(s) {
+    run(s, dmg) {
+      if (!s.diving && (s.canopyBroken || s.flood > 0.2 || dmg.exploded)) {
+        dmg.note = s.canopyBroken ? 'Canopy cracked, diving would flood the cabin' : 'Too much water aboard to dive';
+        dmg.hold = 3;
+        return;
+      }
       s.diving = !s.diving;
       if (s.diving) s.targetDepth = 1.2;
     },

@@ -1,9 +1,9 @@
-// Costa del Gzowo boats: assembles a boat model from merged batches (hull and fittings, glass, moving parts) and exposes the helm, seat, boarding and lamp API the vehicle contract expects.
+// Costa del Gzowo boats: assembles a boat model from merged batches (hull and fittings, glass, moving and detachable parts) and exposes the helm, seat, boarding, lamp and damage API the vehicle contract expects.
 import * as THREE from 'three';
 import { createBoatMaterials, CH } from './boatMaterials.js';
 
-export function createBoatModel(ctx, { id, glassTint = 0x0a1418, glassBase = 0.2 }) {
-  const mats = createBoatMaterials(ctx.lighting);
+export function createBoatModel(ctx, { id, glassTint = 0x0a1418, glassBase = 0.2, damageBox }) {
+  const mats = createBoatMaterials(ctx.lighting, damageBox);
   const glassMat = mats.glass(glassTint, glassBase);
   const group = new THREE.Group();
   group.name = id;
@@ -19,10 +19,13 @@ export function createBoatModel(ctx, { id, glassTint = 0x0a1418, glassBase = 0.2
     parent.add(m);
     return m;
   };
+  const glassMeshes = [];
   const glass = (geometry, parent = group) => {
     const m = new THREE.Mesh(geometry, glassMat);
     m.renderOrder = 2;
     parent.add(m);
+    geometry.computeBoundingSphere();
+    glassMeshes.push(m);
     return m;
   };
   const pivot = (x, y, z, parent = group) => {
@@ -59,9 +62,28 @@ export function createBoatModel(ctx, { id, glassTint = 0x0a1418, glassBase = 0.2
     helm,
     visual,
     cullRadius: 8,
+    hull: null,
+    glassMeshes,
+    parts: {},
+    partNames: [],
+    lampSpots: [],
     mesh,
     glassMesh: glass,
     pivot,
+    setHull(m) {
+      model.hull = m;
+      m.geometry.userData.rest = m.geometry.attributes.position.array.slice();
+      m.geometry.userData.restNormal = m.geometry.attributes.normal.array.slice();
+      return m;
+    },
+    part(name, node, opts) {
+      model.parts[name] = { node, rest: { position: node.position.clone(), quaternion: node.quaternion.clone() }, ...opts };
+      model.partNames.push(name);
+      return node;
+    },
+    lampAt(ch, x, y, z) {
+      model.lampSpots.push({ ch, at: new THREE.Vector3(x, y, z) });
+    },
     bindState() {},
     bindSim() {},
     setRoof() {},

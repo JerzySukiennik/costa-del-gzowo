@@ -93,6 +93,14 @@ export function createBoatWater(car, spec, id) {
         }
       }
     }
+    if (water.bubbles && s.flood > 0.03 && s.flood < 1 && s.ingress > 0) {
+      const m = poisson(Math.min(240, s.ingress * 120 * 400 * (s.sunk ? 0.5 : 1)) * dt);
+      for (let i = 0; i < m; i++) {
+        p.set(rand(-fx.halfLength, fx.halfLength) * 0.7, rand(0, fx.halfHeight), rand(-fx.halfBeam, fx.halfBeam) * 0.7).applyQuaternion(car.quaternion).add(pos);
+        if (p.y > level - 0.05) p.y = level - 0.1;
+        water.bubbles.spawn(KIND.BUBBLE, p.x, p.y, p.z, rand(-0.2, 0.2), rand(0.3, 0.9), rand(-0.2, 0.2), rand(0.01, 0.05), rand(2, 5), rand(0.5, 0.9), 0);
+      }
+    }
     if (fx.thrusters && water.bubbles && s.submerged && (s.throttle > 0.05 || s.brake > 0.05 || Math.random() < dt * 3)) {
       const n = poisson((8 + 110 * Math.max(s.throttle, s.brake)) * dt);
       for (const th of fx.thrusters) {

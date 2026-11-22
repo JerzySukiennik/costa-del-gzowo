@@ -1,4 +1,4 @@
-// Costa del Gzowo boats: recorded engine, motor and hull-wash loops, mixed per boat by throttle, speed and depth and placed around the camera.
+// Costa del Gzowo boats: recorded engine, motor, hull-wash, fire and flooding loops mixed per boat by throttle, speed, depth and damage, plus one-shot hull impacts, placed around the camera.
 const LEAD = 0.25;
 const LENGTH = 8;
 const cache = new Map();
@@ -13,7 +13,7 @@ function load(ac, base, name) {
 
 export function createBoatAudio(audio, base, layers) {
   const ac = audio && audio.context;
-  if (!ac) return { update() {} };
+  if (!ac) return { update() {}, play() {} };
   const out = ac.createGain();
   out.gain.value = 0;
   const pan = ac.createStereoPanner();
@@ -59,8 +59,26 @@ export function createBoatAudio(audio, base, layers) {
     v.gain = null;
   }
 
+  const shots = {};
+  for (const name of ['hull_crunch', 'hull_crack']) load(ac, base, name).then((buffer) => (shots[name] = buffer));
   let silent = 0;
+  let lastShot = 0;
   return {
+    play(name, gain = 1) {
+      const buffer = shots[name];
+      if (!buffer || ac.state !== 'running' || ac.currentTime - lastShot < 0.08) return;
+      lastShot = ac.currentTime;
+      const source = ac.createBufferSource();
+      source.buffer = buffer;
+      source.playbackRate.value = 0.85 + Math.random() * 0.3;
+      const g = ac.createGain();
+      g.gain.value = gain;
+      source.connect(g);
+      g.connect(out);
+      source.onended = () => g.disconnect();
+      source.start();
+      silent = 0;
+    },
     update(dt, { state, camera, position, inside }) {
       if (ac.state !== 'running') return;
       const t = ac.currentTime;

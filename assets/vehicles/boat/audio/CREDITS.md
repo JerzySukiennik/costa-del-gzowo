@@ -1,6 +1,6 @@
 # Boat audio credits
 
-All recordings come from freesound.org and are licensed Creative Commons 0 (public domain). Steady stretches were cut, loudness-matched, crossfaded into seamless loops and re-encoded.
+All recordings come from freesound.org and are licensed Creative Commons 0 (public domain). Steady stretches were cut, loudness-matched, crossfaded into seamless loops and re-encoded; the impacts were cut at their loudest hit.
 
 - `outboard_idle.mp3`: [454201](https://freesound.org/people/kyles/sounds/454201/) by kyles (speed boat outboard motors, low gear bubbling)
 - `outboard_run.mp3`: [637744](https://freesound.org/people/kyles/sounds/637744/) by kyles (outboard motor boat onboard at high speed)
@@ -12,3 +12,7 @@ All recordings come from freesound.org and are licensed Creative Commons 0 (publ
 - `yacht_engine.mp3`: [417555](https://freesound.org/people/Wakerone/sounds/417555/) by Wakerone (ship engine ambience)
 - `hull_lap.mp3`: [758858](https://freesound.org/people/Alex_hears_things/sounds/758858/) by Alex_hears_things (small boat wake lapping under a wooden boardwalk)
 - `hull_rush.mp3`: [74916](https://freesound.org/people/mrmayo/sounds/74916/) by mrmayo (back of a ferry boat, water rushing)
+- `fire_loop.mp3`: [249418](https://freesound.org/people/midimagician/sounds/249418/) by midimagician (fire burning)
+- `sink_gurgle.mp3`: [637972](https://freesound.org/people/kyles/sounds/637972/) by kyles (water gurgling down a drain)
+- `hull_crunch.mp3`: [395040](https://freesound.org/people/AslakHostaker/sounds/395040/) by AslakHostaker (fibreglass scooter body falling onto asphalt)
+- `hull_crack.mp3`: [518791](https://freesound.org/people/Sonicquinn/sounds/518791/) by Sonicquinn (plywood breaking)

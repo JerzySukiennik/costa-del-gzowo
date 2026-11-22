@@ -27,6 +27,13 @@ SOUNDS = {
     "yacht_engine": (417555, "Wakerone", 30.0, "ship engine ambience"),
     "hull_lap": (758858, "Alex_hears_things", 70.0, "small boat wake lapping under a wooden boardwalk"),
     "hull_rush": (74916, "mrmayo", 51.5, "back of a ferry boat, water rushing"),
+    "fire_loop": (249418, "midimagician", 3.0, "fire burning"),
+    "sink_gurgle": (637972, "kyles", 20.0, "water gurgling down a drain"),
+}
+
+SHOTS = {
+    "hull_crunch": (395040, "AslakHostaker", 1.4, "fibreglass scooter body falling onto asphalt"),
+    "hull_crack": (518791, "Sonicquinn", 1.6, "plywood breaking"),
 }
 
 
@@ -47,7 +54,7 @@ def decode(path, start, length):
 def main():
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(RAW, exist_ok=True)
-    credits = ["# Boat audio credits", "", "All recordings come from freesound.org and are licensed Creative Commons 0 (public domain). Steady stretches were cut, loudness-matched, crossfaded into seamless loops and re-encoded.", ""]
+    credits = ["# Boat audio credits", "", "All recordings come from freesound.org and are licensed Creative Commons 0 (public domain). Steady stretches were cut, loudness-matched, crossfaded into seamless loops and re-encoded; the impacts were cut at their loudest hit.", ""]
     for name, (sid, user, start, what) in SOUNDS.items():
         raw = os.path.join(RAW, f"{sid}.mp3")
         page_url = f"https://freesound.org/people/{user}/sounds/{sid}/"
@@ -68,6 +75,32 @@ def main():
         full = np.concatenate([loop[-lead:], loop, loop[: lead]])
         wav = os.path.join(RAW, name + ".f32")
         full.astype(np.float32).tofile(wav)
+        dest = os.path.join(OUT, name + ".mp3")
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", wav, "-b:a", "96k", dest], check=True)
+        os.remove(wav)
+        credits.append(f"- `{name}.mp3`: [{sid}]({page_url}) by {user} ({what})")
+        print(name, os.path.getsize(dest) // 1024, "kB")
+    for name, (sid, user, length, what) in SHOTS.items():
+        raw = os.path.join(RAW, f"{sid}.mp3")
+        page_url = f"https://freesound.org/people/{user}/sounds/{sid}/"
+        if not os.path.exists(raw) or os.path.getsize(raw) == 0:
+            page = get(page_url).decode("utf8", "ignore")
+            m = re.search(r"https://cdn\.freesound\.org/previews/\d+/%d_\d+-(?:hq|lq)\.mp3" % sid, page)
+            open(raw, "wb").write(get(re.sub(r"-lq\.mp3$", "-hq.mp3", m.group(0))))
+            time.sleep(3)
+        x = decode(raw, 0, 600)
+        hop = 441
+        env = np.sqrt(np.convolve(x * x, np.ones(hop) / hop, mode="same"))
+        peak = int(np.argmax(env))
+        start = max(0, peak - int(0.04 * SR))
+        while start > 0 and env[start] > env[peak] * 0.08 and peak - start < int(0.3 * SR):
+            start -= hop
+        y = x[start : start + int(length * SR)].copy()
+        fade = int(0.25 * SR)
+        y[-fade:] *= np.linspace(1, 0, fade, dtype=np.float32)
+        y /= max(1e-6, np.abs(y).max()) / 0.89
+        wav = os.path.join(RAW, name + ".f32")
+        y.astype(np.float32).tofile(wav)
         dest = os.path.join(OUT, name + ".mp3")
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", wav, "-b:a", "96k", dest], check=True)
         os.remove(wav)

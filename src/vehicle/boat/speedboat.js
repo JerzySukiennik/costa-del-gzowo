@@ -60,7 +60,7 @@ function wheel() {
 export async function build(ctx) {
   const shape = hullShape(SPEC);
   const surf = hullSurfaces(shape, { nu: 44, nb: 12, ns: 16, deckFrom: 0.57, floorY: 0.14, wall: 0.08, camber: 0.06, flare: 0.7 });
-  const model = createBoatModel(ctx, { id: 'speedboat' });
+  const model = createBoatModel(ctx, { id: 'speedboat', damageBox: [-4.4, 8.8, -0.6, 2.0] });
   model.cullRadius = 6;
   const b = new Batch();
   b.add(surf.bottom, F.anti);
@@ -130,8 +130,11 @@ export async function build(ctx) {
   }
   b.add(at(box(0.1, 0.5, 2.0, 0.03), X0 - 0.05, 0.28, 0), F.gel);
   b.add(at(box(0.42, 0.05, 1.9, 0.02), X0 - 0.24, 0.16, 0), F.grip, PAT.GRIP);
-  model.mesh(b.build());
+  model.setHull(model.mesh(b.build()));
   model.glassMesh(ws);
+  model.lampAt(CH.RED, X0 + 0.8 * L, sheer(0.8), -tz(0.8));
+  model.lampAt(CH.GREEN, X0 + 0.8 * L, sheer(0.8), tz(0.8));
+  model.lampAt(CH.WHITE, -3.55, 1.72, -0.95);
 
   const motor = model.pivot(X0 - 0.35, 0.72, 0);
   const mb = new Batch();
@@ -144,6 +147,13 @@ export async function build(ctx) {
   mb.add(at(box(0.3, 0.06, 0.04, 0.02), -0.22, 0.36, 0.235), F.white);
   mb.add(at(box(0.3, 0.06, 0.04, 0.02), -0.22, 0.36, -0.235), F.white);
   model.mesh(mb.build(), motor);
+  model.part('motor', motor, {
+    label: 'Outboard', half: [0.3, 0.7, 0.25], mass: 180, float: false, limit: 1.2, tearAt: 5, bend: [0, 0.9],
+    zone: (lp, below) => (lp.x < X0 + 0.7 ? 1 : below && lp.x < X0 + 2 ? 0.6 : 0),
+    onBend: (car, d) => (car.state.thrustScale = Math.max(0.1, 1 - d * 0.55)),
+    onLose: (car) => (car.state.thrustScale = 0),
+    onRepair: (car) => (car.state.thrustScale = 1),
+  });
   const prop = model.pivot(-0.36, -1.1, 0, motor);
   const pb = new Batch();
   pb.add(propeller(0.17, 3).rotateZ(Math.PI / 2).rotateY(Math.PI / 2), F.steel);
@@ -177,8 +187,11 @@ export async function build(ctx) {
   model.update = (dt, s) => {
     time += dt;
     const steer = (s.steer / 0.6) * 0.55;
-    motor.rotation.y = -steer;
-    motor.rotation.z = -0.05 * s.planing;
+    const out = model.parts.motor;
+    if (!out.detached) {
+      motor.rotation.y = -steer * (1 - (out.k || 0));
+      motor.rotation.z = -0.05 * s.planing + 0.9 * (out.k || 0);
+    }
     spin += dt * (s.occupied ? 8 + s.engineLoad * 160 : 0);
     prop.rotation.x = spin % (Math.PI * 2);
     wheelMesh.rotation.x = -steer * 2.6;
@@ -195,6 +208,8 @@ export async function build(ctx) {
     latLin: 0.6, latQuad: 0.7, latX: -0.7, steerMax: 0.5, steerRate: 2.0, vector: 0.7, rudder: 0.0026,
     yawDamp: 2.0, rollDamp: 3.2, pitchDamp: 2.4, bank: 0.11, righting: 1.6, capsize: 0.35,
     prop: [X0 - 0.45, -0.42, 0],
+    dentAt: 0.8, crushAt: 7, dentScale: 0.06, dentLimit: 0.35, holeAt: 2.4, breachScale: 0.9, engineHit: 0.12, shatterAt: 4, metal: false, chips: [0.85, 0.85, 0.82],
+    engine: [X0 - 0.35, 1.0, 0], burnTime: 10, blastBreach: 1.6, maxBreach: 2, floodTime: 22,
     colliders: [{ points: hullPts }, { half: [0.3, 0.45, 0.25], at: [X0 - 0.45, 0.6, 0] }],
     camera: { distance: 8.5, height: 1.7, ahead: 3, pitch: 0.17 },
     keys: { handbrake: 'KeyX', camera: 'KeyV' },

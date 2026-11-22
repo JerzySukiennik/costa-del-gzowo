@@ -63,7 +63,7 @@ function wing(x, y, span, chord, dihedral = 0.08) {
 export async function build(ctx) {
   const shape = hullShape(SPEC);
   const surf = hullSurfaces(shape, { nu: 48, nb: 12, ns: 16, deckFrom: 0, camber: 0.12, flare: 0.65, bottomPow: 0.85 });
-  const model = createBoatModel(ctx, { id: 'foilboat', glassBase: 0.12 });
+  const model = createBoatModel(ctx, { id: 'foilboat', glassBase: 0.12, damageBox: [-3.6, 7.2, -0.5, 1.4] });
   model.cullRadius = 5.5;
   const b = new Batch();
   b.add(surf.bottom, [0.012, 0.03, 0.025, 0.3, 0.1, 0.6]);
@@ -102,26 +102,50 @@ export async function build(ctx) {
   b.add(at(box(0.04, 0.03, 0.5, 0.01), X0 + 0.05, 0.5, 0), F.lamp, CH.WHITE);
   b.add(at(box(0.5, 0.02, 0.012, 0.005), 2.6, 0.46, 0.0), F.lamp, CH.ACCENT);
   const st = [F.carbon[0], F.carbon[1], F.carbon[2], 0.28, 0.3, 1];
+  const fb = new Batch();
   for (const z of [0.72, -0.72]) {
-    b.add(strut(FRONT_X, z, 0.0, STRUT_Y, 0.2), st, PAT.CARBON);
-    b.add(at(box(0.3, 0.06, 0.16, 0.03), FRONT_X, -0.12, z), F.gold);
+    fb.add(strut(FRONT_X, z, 0.0, STRUT_Y, 0.2), st, PAT.CARBON);
+    fb.add(at(box(0.3, 0.06, 0.16, 0.03), FRONT_X, -0.12, z), F.gold);
   }
-  b.add(wing(FRONT_X - 0.02, STRUT_Y, 0.98, 0.26), st);
+  fb.add(wing(FRONT_X - 0.02, STRUT_Y, 0.98, 0.26), st);
+  const rb = new Batch();
   for (const z of [0.55, -0.55]) {
-    b.add(strut(REAR_X, z, 0.0, STRUT_Y, 0.22), st, PAT.CARBON);
-    b.add(at(box(0.32, 0.06, 0.16, 0.03), REAR_X, -0.1, z), F.gold);
+    rb.add(strut(REAR_X, z, 0.0, STRUT_Y, 0.22), st, PAT.CARBON);
+    rb.add(at(box(0.32, 0.06, 0.16, 0.03), REAR_X, -0.1, z), F.gold);
   }
-  b.add(wing(REAR_X - 0.04, STRUT_Y + 0.02, 0.95, 0.26, 0.05), st);
-  b.add(at(cyl(0.1, 0.07, 0.7, 16), REAR_X - 0.08, STRUT_Y - 0.06, 0, 0, 0, Math.PI / 2), F.gold);
-  b.add(at(sphere(0.1, 1.4, 1, 1), REAR_X + 0.27, STRUT_Y - 0.06, 0), F.gold);
-  b.add(at(box(0.3, 0.08, 0.05, 0.02), REAR_X - 0.04, STRUT_Y - 0.01, 0), st);
-  model.mesh(b.build());
+  rb.add(wing(REAR_X - 0.04, STRUT_Y + 0.02, 0.95, 0.26, 0.05), st);
+  rb.add(at(cyl(0.1, 0.07, 0.7, 16), REAR_X - 0.08, STRUT_Y - 0.06, 0, 0, 0, Math.PI / 2), F.gold);
+  rb.add(at(sphere(0.1, 1.4, 1, 1), REAR_X + 0.27, STRUT_Y - 0.06, 0), F.gold);
+  rb.add(at(box(0.3, 0.08, 0.05, 0.02), REAR_X - 0.04, STRUT_Y - 0.01, 0), st);
+  model.setHull(model.mesh(b.build()));
+  const frontFoil = model.pivot(FRONT_X, 0, 0);
+  model.mesh(fb.build().translate(-FRONT_X, 0, 0), frontFoil);
+  const rearFoil = model.pivot(REAR_X, 0, 0);
+  model.mesh(rb.build().translate(-REAR_X, 0, 0), rearFoil);
+  const foilPart = (label, index, zone, extra = {}) => ({
+    label, half: [0.15, 0.8, 0.9], mass: 30, float: false, limit: 1.0, tearAt: 3.2, bend: [0.35, 0.55], zone,
+    onBend: (car, d) => (car.state.foilBend = Math.max(car.state.foilBend || 0, d)),
+    onLose: (car) => {
+      car.state.foilsOff = true;
+      car.colliders[index].setEnabled(false);
+      if (extra.pod) car.state.thrustScale = 0;
+    },
+    onRepair: (car) => {
+      car.state.foilBend = 0;
+      car.colliders[index].setEnabled(true);
+    },
+  });
+  model.part('frontFoil', frontFoil, foilPart('Front foil', 1, (lp, below) => (below && lp.x > -0.8 ? 1 : 0)));
+  model.part('rearFoil', rearFoil, foilPart('Rear foil and motor pod', 2, (lp, below) => (below && lp.x < -1.6 ? 1 : 0), { pod: true }));
+  model.lampAt(CH.RED, 2.2, 0.55, -0.6);
+  model.lampAt(CH.GREEN, 2.2, 0.55, 0.6);
+  model.lampAt(CH.WHITE, X0, 0.5, 0);
   const ws = grid(20, 3, (u, v, p) => {
     const z = (u * 2 - 1) * 0.6;
     p.set(0.55 - 0.3 * (z / 0.6) ** 2 - v * 0.16, sheer(tOf(0.5)) + 0.05 + v * 0.2, z * (1 - 0.1 * v));
   });
   model.glassMesh(ws);
-  const prop = model.pivot(REAR_X - 0.46, STRUT_Y - 0.06, 0);
+  const prop = model.pivot(-0.46, STRUT_Y - 0.06, 0, rearFoil);
   const pb = new Batch();
   pb.add(propeller(0.15, 3).rotateZ(Math.PI / 2).rotateY(Math.PI / 2), F.gold);
   model.mesh(pb.build(), prop, false);
@@ -181,6 +205,8 @@ export async function build(ctx) {
     latLin: 0.7, latQuad: 1.0, latX: -0.4, steerMax: 0.45, steerRate: 2, vector: 0.45, rudder: 0.0035,
     yawDamp: 1.8, rollDamp: 2.2, pitchDamp: 2.6, bank: 0, righting: 1.6, capsize: 0.35,
     prop: [REAR_X - 0.45, STRUT_Y - 0.06, 0], thrustAtCom: true,
+    dentAt: 0.8, crushAt: 6.5, dentScale: 0.06, dentLimit: 0.3, holeAt: 2.2, breachScale: 1.4, engineHit: 0.13, shatterAt: 3.5, metal: false, chips: [0.05, 0.12, 0.1],
+    engine: [-1.6, 0.35, 0], burnTime: 9, blastBreach: 1.6, maxBreach: 2, floodTime: 18,
     colliders: [{ points: hullPts }, { half: [0.13, 0.62, 0.8], at: [FRONT_X, -0.68, 0] }, { half: [0.14, 0.62, 0.6], at: [REAR_X, -0.68, 0] }],
     camera: { distance: 8, height: 1.6, ahead: 3, pitch: 0.16 },
     keys: { handbrake: 'KeyX', camera: 'KeyV' },
