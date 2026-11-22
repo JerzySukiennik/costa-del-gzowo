@@ -32,6 +32,7 @@ import { createCinematics } from './camera/cinematics.js';
 import { createScreens } from './ui/screens.js';
 import { AVATARS } from './player/avatars.js';
 import { VEHICLES } from './vehicle/vehicles.js';
+import { createNpcs } from './npc/npcs.js';
 
 const canvas = document.getElementById('view');
 const params = new URLSearchParams(location.search);
@@ -189,6 +190,10 @@ async function boot() {
     lod.stage(name, on);
     if (perf.reflection) trees.stage(name, on);
   };
+  ctx.npc = await createNpcs(ctx, play).catch((error) => {
+    console.warn('Pedestrians and traffic unavailable.', error);
+    return null;
+  });
   const look = createLook(null, lookTools);
   const useLook = (values) => {
     pipeline.look = values;
@@ -300,6 +305,7 @@ async function boot() {
     trees.setQuality({ impostor: q.impostor, range: q.treeRange, forest: q.forest });
     ctx.grass.setDetail(q.grass, q.grassReach);
     pipeline.setSamples({ ao: q.ao, fog: q.fog, blur: q.blur });
+    if (ctx.npc) ctx.npc.setQuality(quality);
     if (water.params && water.params.reflectionScale !== undefined) {
       water.params.reflectionScale = q.reflection[0];
       water.params.reflectionInterval = q.reflection[1];
@@ -484,6 +490,7 @@ async function boot() {
     else {
       updateFade(dt);
       play.update(dt, elapsed);
+      if (ctx.npc) ctx.npc.update(dt, elapsed);
       if (play.game.cinematic) {
         if (!held) cinematics.update(dt);
         ctx.grass.update(camera.position);
@@ -695,7 +702,7 @@ async function boot() {
   }
 
   window.__dbg = {
-    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, water, play, input, ctx, screens, cinematics, soundtrack, town: ctx.town, perf, lod, waterWatch,
+    renderer, scene, camera, pipeline, lighting, terrain, bridge, physics, trees, plants, water, play, input, ctx, screens, cinematics, soundtrack, town: ctx.town, perf, lod, waterWatch, npc: ctx.npc,
     step(dt, time) {
       elapsed = time === undefined ? elapsed + dt : time;
       renderFrame(dt);
