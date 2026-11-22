@@ -13,6 +13,7 @@ export async function createCybertruck(ctx, spawn, deps) {
   const model = await createTruckModel(ctx);
   const car = createTruckPhysics({ physics: deps.physics, terrain: deps.terrain, model, spawn });
   model.bindState(car.state);
+  car.words = { wrecked: 'Truck wrecked, get a new one', stalled: 'Drive units flooded, reset the truck' };
   const damage = createTruckDamage({ physics: deps.physics, model, car, particles: deps.particles, audio: deps.audio });
   const sound = createTruckAudio(deps.audio, ctx.base || '');
   const input = ctx.input;

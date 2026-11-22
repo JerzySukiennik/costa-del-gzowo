@@ -28,6 +28,7 @@ export async function createBoat(ctx, spawn, deps, kind) {
   const sound = createBoatAudio(deps.audio, ctx.base || '', layers);
   const damage = createBoatDamage({ physics: deps.physics, scene: deps.scene, model, car, particles: deps.particles, audio: deps.audio, sound, design: spec.design });
   car.ownWater = createBoatWater(car, spec, `boat-${kind}-${serial++}`);
+  car.words = { wrecked: 'Boat wrecked, get a new one', stalled: 'Boat swamped, raise it at its berth' };
   const quiet = deps.audio ? { ...deps.audio, door() {} } : null;
   const baseUpdate = model.update;
   model.update = (dt) => {

@@ -201,6 +201,11 @@ export async function createPort(ctx) {
     if (Math.abs(v - SPINE.v) < 1.2) continue;
     S.with({ layer: L.FLAT, color: C.rubber, rough: 0.92 }, () => box(0, 0.22, -0.5, 1.35, v - 0.17, v + 0.17));
   }
+  const ladders = [-15, 9, 27].map((v) => {
+    const foot = portPoint(0.55, v);
+    const top = portPoint(-0.95, v);
+    return { foot, x: top.x, y: SITE.land, z: top.z, yaw: Math.atan2(top.x - foot.x, top.z - foot.z), time: 1.9, label: 'Climb the ladder' };
+  });
   for (const v of [-15, 9, 27]) {
     S.with({ layer: L.FLAT, color: C.steel, metal: 1, rough: 0.4 }, () => {
       for (const dv of [-0.25, 0.25]) tube([[0.1, -1.8, v + dv], [0.1, SITE.land + 0.05, v + dv], [-0.4, SITE.land + 0.9, v + dv], [-0.4, SITE.land, v + dv]], 0.022, 6);
@@ -455,5 +460,5 @@ export async function createPort(ctx) {
   }
   update(0, null);
 
-  return { group, triangles, colliders, obstacles, update, site: SITE };
+  return { group, triangles, colliders, obstacles, ladders, update, site: SITE };
 }

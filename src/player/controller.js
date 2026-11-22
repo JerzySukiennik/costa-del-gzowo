@@ -1,4 +1,4 @@
-// Costa del Gzowo: on-foot player controller (kinematic capsule with walking, sprinting, jumping, wading and swimming).
+// Costa del Gzowo: on-foot player controller (kinematic capsule with walking, sprinting, jumping, wading, swimming and climbing out of the water).
 import * as THREE from 'three';
 import { WORLD } from '../config.js';
 import { GROUPS, groups } from '../core/physics.js';
@@ -28,16 +28,49 @@ export function createPlayer({ physics, character, spawn }) {
 
   const state = {
     mode: 'foot', position: new THREE.Vector3(spawn.x, startY - FEET, spawn.z), velocity: new THREE.Vector3(), yaw: spawn.yaw, grounded: true, vy: 0, speed: 0,
-    depth: 0, wade: 0, inWater: false, headUnder: false, surface: 'gravel', fallStart: startY, justLanded: 0, stepPhase: 0, enabled: true, swimLift: 0,
+    depth: 0, wade: 0, inWater: false, headUnder: false, surface: 'gravel', fallStart: startY, justLanded: 0, stepPhase: 0, enabled: true, swimLift: 0, climb: 0,
   };
   const move = new THREE.Vector3();
   const flow = { x: 0, y: 0 };
   const events = [];
   let prevDepth = 0;
   let airTime = 0;
+  let climb = null;
+  const ease = (x) => x * x * (3 - 2 * x);
+
+  function climbStep(dt, water) {
+    climb.t = Math.min(1, climb.t + dt / climb.time);
+    const rise = ease(Math.min(1, climb.t / 0.64));
+    const reach = ease(Math.max(0, (climb.t - 0.42) / 0.58));
+    const x = climb.x0 + (climb.x1 - climb.x0) * reach;
+    const z = climb.z0 + (climb.z1 - climb.z0) * reach;
+    const y = climb.y0 + (climb.y1 - climb.y0) * rise;
+    const level = water ? water.getHeightAt(x, z) : WORLD.waterLevel;
+    body.setNextKinematicTranslation({ x, y: y + FEET, z });
+    state.position.set(x, y, z);
+    state.velocity.set(0, 0, 0);
+    state.vy = 0;
+    state.speed = reach > 0 && reach < 1 ? 1.4 : 0;
+    state.depth = Math.max(0, level - y);
+    state.inWater = state.depth > 0.05 && reach < 0.2;
+    state.wade = Math.min(1, state.depth / 1.2) * (1 - reach);
+    state.headUnder = false;
+    state.climb = climb.t;
+    prevDepth = state.depth;
+    airTime = 0;
+    if (climb.t >= 1) {
+      climb = null;
+      state.climb = 0;
+      state.grounded = true;
+    }
+  }
 
   function fixedUpdate(dt, input, water) {
     if (!state.enabled) return;
+    if (climb) {
+      climbStep(dt, water);
+      return;
+    }
     const t = body.translation();
     const feetY = t.y - FEET;
     const level = water ? water.getHeightAt(t.x, t.z) : WORLD.waterLevel;
@@ -116,9 +149,10 @@ export function createPlayer({ physics, character, spawn }) {
     state.swimLift += ((swimMoving ? 0.2 : state.mode === 'swim' ? 0.0 : 0) - state.swimLift) * Math.min(1, dt * 5);
     character.group.position.set(state.position.x, state.position.y + state.swimLift, state.position.z);
     character.group.rotation.set(0, state.yaw, 0);
-    const mode = state.mode === 'swim' ? 'swim' : state.grounded || airTime < 0.12 ? 'foot' : 'air';
-    const heading = state.speed > 0.3 ? Math.atan2(state.velocity.x, state.velocity.z) : state.yaw;
-    character.update(dt, { mode, speed: state.speed, vy: state.vy, wade: state.wade, heading });
+    const rising = climb && climb.t < 0.5;
+    const mode = rising ? 'air' : state.mode === 'swim' ? 'swim' : state.grounded || airTime < 0.12 ? 'foot' : 'air';
+    const heading = state.speed > 0.3 && !climb ? Math.atan2(state.velocity.x, state.velocity.z) : state.yaw;
+    character.update(dt, { mode, speed: state.speed, vy: rising ? 1.6 : state.vy, wade: state.wade, heading });
   }
 
   return {
@@ -131,7 +165,20 @@ export function createPlayer({ physics, character, spawn }) {
       state.vy = 0;
       if (yaw !== undefined) state.yaw = yaw;
     },
+    climbTo(x, y, z, yaw, time = 1.1) {
+      if (climb || !state.enabled) return false;
+      climb = { t: 0, time, x0: state.position.x, y0: state.position.y, z0: state.position.z, x1: x, y1: y + 0.02, z1: z };
+      state.mode = 'foot';
+      state.grounded = false;
+      state.yaw = yaw;
+      state.climb = 0.001;
+      return true;
+    },
     setEnabled(on) {
+      if (!on) {
+        climb = null;
+        state.climb = 0;
+      }
       state.enabled = on;
       collider.setEnabled(on);
     },

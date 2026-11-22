@@ -12,6 +12,7 @@ const DUST = { [GROUND.SAND]: [0.62, 0.56, 0.44], [GROUND.GRAVEL]: [0.58, 0.55, 
 export async function createHeli(ctx, spawn, deps) {
   const model = await createHeliModel(ctx);
   const car = createHeliPhysics({ physics: deps.physics, model, spawn, input: ctx.input });
+  car.words = { wrecked: 'Helicopter wrecked, get a new one', stalled: 'Engine drowned, reset the helicopter' };
   const damage = createHeliDamage({ physics: deps.physics, model, car, particles: deps.particles, audio: deps.audio });
   const sound = createHeliAudio(deps.audio, ctx.base || '');
   const p = new THREE.Vector3();

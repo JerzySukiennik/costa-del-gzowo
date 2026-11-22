@@ -113,7 +113,7 @@ export function createTruckMaterials({ lighting, leatherMaps }) {
   const brush = brushTextures();
   const steelUniforms = { tDamage: { value: damageTexture }, uDirt: { value: 0.12 }, uChar: base.char, uLift: { value: 0 } };
   const steel = base.register(hookMaterial(new THREE.MeshPhysicalMaterial({
-    color: 0xa9afb5, vertexColors: true, metalness: 1, roughness: 0.17, roughnessMap: brush.roughness, normalMap: brush.normal, normalScale: new THREE.Vector2(0.22, 0.22),
+    color: 0xa3adb8, vertexColors: true, metalness: 1, roughness: 0.4, roughnessMap: brush.roughness, normalMap: brush.normal, normalScale: new THREE.Vector2(0.22, 0.22),
     anisotropy: 0.22, anisotropyRotation: 0, envMapIntensity: 1.2, side: THREE.DoubleSide,
   }), { key: 'ct-steel', uniforms: steelUniforms, pars: STEEL_V, fragPars: STEEL_F, vertex: STEEL_V_SNIP, color: STEEL_COLOR, normal: STEEL_NORMAL, dynamic: true }));
   return { ...base, steel, steelUniforms, damageCanvas, damageCtx, damageTexture, paintUniforms: steelUniforms };

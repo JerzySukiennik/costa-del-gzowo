@@ -68,6 +68,7 @@ export async function createGame(ctx) {
   let boostKick = 0;
   let lastLanding = 0;
   let placeName = 'Sawgrass River Bridge';
+  const ledge = { x: 0, y: 0, z: 0, yaw: 0, time: 1.1, label: 'Climb out' };
   const pushA = new THREE.Vector4();
   const pushB = new THREE.Vector4();
   const bodyShadow = new THREE.Vector4();
@@ -95,6 +96,30 @@ export async function createGame(ctx) {
     ray.origin.z = z;
     const hit = physics.world.castRay(ray, 6, true, undefined, groups(0xffff, GROUPS.WORLD));
     return hit ? y - (hit.timeOfImpact ?? hit.toi) : null;
+  }
+
+  function climbSpot() {
+    const ps = player.state;
+    if (game.mode !== 'foot' || game.transition || ps.mode !== 'swim' || ps.climb) return null;
+    const px = ps.position.x;
+    const pz = ps.position.z;
+    const ladders = ctx.port ? ctx.port.ladders : null;
+    if (ladders) for (const l of ladders) if (Math.hypot(l.foot.x - px, l.foot.z - pz) < 1.5) return l;
+    const level = game.water ? game.water.getHeightAt(px, pz) : WORLD.waterLevel;
+    const dx = Math.sin(ps.yaw);
+    const dz = Math.cos(ps.yaw);
+    for (const reach of [0.75, 1.05]) {
+      const x = px + dx * reach;
+      const z = pz + dz * reach;
+      const top = groundBelow(x, level + 1.5, z);
+      if (top === null || top < level + 0.2 || top > level + 1.15) continue;
+      ledge.x = x;
+      ledge.y = top;
+      ledge.z = z;
+      ledge.yaw = ps.yaw;
+      return ledge;
+    }
+    return null;
   }
 
   function seatCharacter() {
@@ -255,6 +280,8 @@ export async function createGame(ctx) {
     const rideTarget = atDoor && vehicle.driver >= 0 && vehicle.passenger < 0 && car.state.speed < 3 ? vehicle : null;
     const statue = statues && game.mode === 'foot' && !game.transition && !atDoor ? statues.near(v, avatars.current) : null;
     const net = ctx.net || null;
+    const climbAt = climbSpot();
+    if (climbAt && input.hit('Space')) player.climbTo(climbAt.x, climbAt.y, climbAt.z, climbAt.yaw, climbAt.time);
     if (game.mode === 'ride' && game.ride.driver < 0) endRide();
     if (input.hit('KeyF') && !game.transition) {
       if (nearDoor) {
@@ -342,7 +369,8 @@ export async function createGame(ctx) {
     else if (rideTarget) hud.prompt('F', `Ride with ${rideTarget.driverName || 'the driver'}`);
     else if (statue) hud.prompt('F', `Become ${statue.name}`);
     else if (game.mode === 'ride' && car.state.speed < 1.5) hud.prompt('F', 'Get out');
-    else if (inCar && car.state.stalled) hud.prompt('R', damage.state.exploded ? 'Car wrecked, get a new one' : 'Engine flooded, reset car');
+    else if (climbAt) hud.prompt('Space', climbAt.label);
+    else if (inCar && car.state.stalled) hud.prompt('R', damage.state.exploded ? (car.words && car.words.wrecked) || 'Car wrecked, get a new one' : (car.words && car.words.stalled) || 'Engine flooded, reset car');
     else if (inCar && exitHint > 0 && car.state.speed < 1) hud.prompt('F', car.hint ? car.hint : car.keys ? 'Exit   ·   Space up   ·   C down   ·   Shift boost   ·   Q E radio' : 'Exit   ·   Q E radio   ·   T roof   ·   H lights');
     else hud.prompt('', '');
     hud.drive(game.mode !== 'foot', car.state);

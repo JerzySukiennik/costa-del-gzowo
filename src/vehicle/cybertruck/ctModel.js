@@ -97,6 +97,11 @@ export async function createTruckModel(ctx) {
     if (o.isMesh) o.frustumCulled = false;
   });
 
+  const heads = new THREE.SpotLight(0xf2f5ff, 0, 80, 0.62, 0.85, 1.7);
+  heads.position.set(CT.nose - 0.05, 0.98, 0);
+  heads.target.position.set(CT.nose + 20, -0.5, 0);
+  group.add(heads, heads.target);
+
   const lamp = mats.lampUniforms;
   const vault = { value: 0, target: 0 };
   const roof = { value: 0, target: 0 };
@@ -230,6 +235,7 @@ export async function createTruckModel(ctx) {
       v[4] = brake * 11;
       v[5] = reverse ? 9 : 0;
       v[8] = 0.25 + 1.6 * on;
+      heads.intensity = beam ? 440 * (1 - (lamp.uHeadBroken.value.x + lamp.uHeadBroken.value.y) * 0.5) : 0;
     },
     update(dt) {
       for (const [name, d] of Object.entries(doors)) {
