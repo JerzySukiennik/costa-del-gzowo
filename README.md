@@ -63,6 +63,18 @@ A tuning tool that exists only when the game runs on localhost; the public site 
 
 The map is one island with an irregular coast, cut in two by the river strait under the bridge: the west half is nature (parking pull-off, meadow, forest, hills), the east half holds Gzowo Springs, which starts right where the bridge approach ends, with a harbour bay on its sunny side. Open sea runs to the horizon (the water surface follows the camera out to 3.6 km and the seabed continues past the terrain grid), and the flying boundary is 1.4 km out. The coast is `coastDistance()` in `src/world/heightfield.js`; the town is still written in its own coordinates (`src/world/town/layout.js`) and moved into place as one piece by `TOWN.shift` (`src/world/town/space.js`).
 
+## Marina and boats
+
+Gzowo Springs Marina sits in the harbour bay south of the town (two gravel ramps lead down from the cross streets): a quay, floating docks with numbered slips, a fuel dock, the harbour office, a slipway and a crane, built in its own frame from `PORT` in `src/config.js` (`src/world/port/`). Four boats are moored there and are ordinary fleet vehicles (`src/vehicle/boat/`): a sport boat that planes, an electric hydrofoil that flies on four struts above about 25 km/h, a dive boat that submerges (G), and a 26 m trimaran yacht. Boats take full damage: dents and scrapes, cracked glass, torn-off foils and motors, flooding with list and sinking, fire and explosion; R raises and repairs them at their slip.
+
+## People and traffic
+
+Twelve baked procedural pedestrians and four traffic car types live in the town (`src/npc/`). People walk to places, sit, look at phones, wait at kerbs and cross on the crossings, dodge fast cars and get knocked down and up again; cars keep lanes, obey the signals and the priority rules, give way on crossings, pass obstacles and honk. The numbers follow the quality level. Each client simulates its own.
+
+## Cyber Truck
+
+A stainless steel electric pickup (`src/vehicle/cybertruck/`): 0 to 100 km/h in about 2.7 s, four-wheel steer-by-wire with spin-on-the-spot (Space with A or D) and a nose pivot (Space, W and A or D), air suspension with three heights (G), a powered vault cover (T), a cockpit camera with a live screen (V), a synthesised drive-unit sound and armoured damage.
+
 ## Time of day
 
 Golden hour fades through a red sunset into a moonlit night with stars and back, on an 18 minute clock taken from the wall time so every player sees the same sky. The sun does not travel: only its strength and colour change (and the sky, fog, grass, distant trees and grade with it), so shadows and baked data stay valid. Settings has "Time of day" (Day and night, Golden hour, Night); `?time=golden` pins it. Headlights come on by themselves at night.

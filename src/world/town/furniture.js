@@ -136,7 +136,7 @@ export async function buildFurniture(T) {
   signPost(265.2, 7.6, [{ item: I.speed25, w: 0.6, yaw: -Math.PI / 2, h: 2.0 }]);
   signPost(289.2, 9.9, [{ item: I.busstop, w: 0.5, yaw: -Math.PI / 2, h: 2.2 }]);
   signPost(293.6, 38.8, [{ item: I.parking, w: 0.55, yaw: Math.PI / 2, h: 2.0 }]);
-  for (const c of CROSS) for (const s of [-1, 1]) signPost(c.x + s * 4.6, s * 64.5, [{ item: I.deadend, w: 0.7, yaw: s > 0 ? Math.PI : 0, h: 1.8 }]);
+  for (const c of CROSS) for (const s of [-1]) signPost(c.x + s * 4.6, s * 64.5, [{ item: I.deadend, w: 0.7, yaw: s > 0 ? Math.PI : 0, h: 1.8 }]);
   signPost(318, -9.9, [{ item: I.noparking, w: 0.45, yaw: 0, h: 2.0 }]);
   signPost(360, 9.9, [{ item: I.xing, w: 0.6, yaw: -Math.PI / 2, h: 2.2 }]);
 
