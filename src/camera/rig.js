@@ -120,8 +120,14 @@ export function createCameraRig({ camera, physics }) {
       desired.sub(pivotSmooth).normalize().multiplyScalar(currentDist).add(pivotSmooth);
       look.copy(pivotSmooth).addScaledVector(f, view ? view.ahead : 1.6);
       look.y += 0.15;
+      if (view && view.cockpit) {
+        desired.copy(view.eye);
+        look.copy(f).applyAxisAngle(car.up, rig.orbit).multiplyScalar(10).add(view.eye).addScaledVector(car.up, (view.pitch - rig.pitch) * 8 - 2.4);
+        lookSmooth.copy(look);
+      }
       const wide = feel.fov + Math.min(1, speed / 55) * 15 * feel.speedFov;
       fov = focal > 0 ? tele + (wide - tele) * THREE.MathUtils.smoothstep(speed, 1, 27) : wide;
+      if (view && view.cockpit) fov = view.fov + Math.min(1, speed / 55) * 8;
       rig.trauma = Math.max(rig.trauma, Math.min(0.25, (s.skid || 0) * 0.08 + (s.onGround > 0 && car.wheels.some((w) => w.surf.loose > 0.4) ? Math.min(0.1, speed * 0.004) : 0)));
     }
     const ground = heightAt(desired.x, desired.z);

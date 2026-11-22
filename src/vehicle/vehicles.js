@@ -8,12 +8,17 @@ export const VEHICLES = [
   { id: 'convertible', name: 'Costa GT Convertible', specs: { power: '420 kW', torque: '500 Nm', mass: '1650 kg', drive: 'AWD, 7-speed automatic', top: '300 km/h', zeroTo100: '4.1 s', roof: 'Three-bow fabric soft top' } },
   { id: 'roadster', name: 'Roadster', specs: { power: '950 kW', mass: '1950 kg', drive: 'Tri-motor AWD', top: '402 km/h', zeroTo100: '1.9 s', thrusters: '10 cold-gas nozzles, 4 rear boost, 2 front retro, 4 side lift' } },
   { id: 'heli', name: 'Kestrel Helicopter', specs: { power: '450 kW turboshaft', mass: '1150 kg', drive: 'Three-blade rotor, 9.4 m', top: '200 km/h', seats: '5', ceiling: '560 m' } },
+  { id: 'cybertruck', name: 'Cyber Truck', specs: { power: '700 kW tri-motor', mass: '3100 kg', drive: 'AWD, four-wheel steer-by-wire', top: '210 km/h', zeroTo100: '2.7 s', seats: '5' } },
 ];
 
 export async function createVehicle(ctx, id, spawn, deps) {
   if (id === 'heli') {
     const { createHeli } = await import('./heli/heli.js');
     return createHeli(ctx, spawn, deps);
+  }
+  if (id === 'cybertruck') {
+    const { createCybertruck } = await import('./cybertruck/cybertruck.js');
+    return createCybertruck(ctx, spawn, deps);
   }
   if (id === 'roadster') {
     const { createRoadster } = await import('./roadster/roadster.js');
