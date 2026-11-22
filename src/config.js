@@ -90,6 +90,7 @@ export const FLEET = [
   { id: 'roadster', x: -113.5, z: 9.6, yaw: 0.12 },
   { id: 'heli', x: -127, z: 14, yaw: 0.12 },
   { id: 'heli', x: -138.5, z: 14, yaw: 0.12 },
+  { id: 'cybertruck', x: -120.2, z: 7.9, yaw: 0.12 },
 ];
 
 export const STATUES = [

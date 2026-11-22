@@ -5,7 +5,7 @@ import { createAvatars } from '../player/avatars.js';
 import { NET } from './firebaseConfig.js';
 import { FLAG } from './protocol.js';
 
-const TAG = { convertible: 1.75, roadster: 1.6, heli: 3.3 };
+const TAG = { convertible: 1.75, roadster: 1.6, heli: 3.3, cybertruck: 2.25 };
 const lerp = (a, b, k) => a + (b - a) * k;
 
 export function createTrack() {
