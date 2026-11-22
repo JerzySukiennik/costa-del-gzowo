@@ -24,6 +24,7 @@ import { createNameTags } from './ui/nametags.js';
 import { createLook } from './render/look.js';
 import { createLookEditor } from './ui/lookEditor.js';
 import { createPerfPanel } from './ui/perfPanel.js';
+import { createPhotoMode } from './ui/photoMode.js';
 import { createAudio } from './audio/audio.js';
 import { createRadio } from './audio/radio.js';
 import { createSoundtrack } from './audio/soundtrack.js';
@@ -306,6 +307,8 @@ async function boot() {
   let paused = false;
   let benching = false;
   let held = false;
+  let photo = null;
+  let capturing = false;
   let elapsed = 0;
   let frames = 0;
   let fps = 60;
@@ -385,12 +388,21 @@ async function boot() {
 
   window.addEventListener('keydown', (e) => {
     if (mode !== 'playing' || paused || e.defaultPrevented) return;
+    if (photo && photo.active) {
+      if (e.code === 'Escape' || e.code === 'KeyP') setPhoto(false);
+      else if (e.code === 'Enter' || e.code === 'NumpadEnter') photo.take();
+      return;
+    }
+    if (e.code === 'KeyP' && photo && !play.game.cinematic) {
+      setPhoto(true);
+      return;
+    }
     if (e.code === 'Escape') {
       setPaused(true);
       screens.showPause();
     } else if (e.code === 'KeyO' && lookEditor) {
       showLook(!lookOpen);
-    } else if (e.code === 'KeyP' && perfPanel) {
+    } else if (e.code === 'KeyI' && perfPanel) {
       showPerf(!perfOpen);
     } else if (perfOpen && perfPanel.key(e.code)) {
       e.preventDefault();
@@ -412,7 +424,7 @@ async function boot() {
       perfPanel.show(false);
       return;
     }
-    if (mode === 'playing' && !document.pointerLockElement && !paused && !lookOpen && !perfOpen && !params.has('auto')) {
+    if (mode === 'playing' && !document.pointerLockElement && !paused && !lookOpen && !perfOpen && !(photo && photo.active) && !params.has('auto')) {
       setPaused(true);
       screens.showPause();
     }
@@ -442,11 +454,14 @@ async function boot() {
   function renderFrame(dt) {
     renderer.info.reset();
     ctx.time.value = elapsed;
-    updateFade(dt);
-    play.update(dt, elapsed);
-    if (play.game.cinematic) {
-      if (!held) cinematics.update(dt);
-      ctx.grass.update(camera.position);
+    if (photo && photo.active) ctx.grass.update(camera.position);
+    else {
+      updateFade(dt);
+      play.update(dt, elapsed);
+      if (play.game.cinematic) {
+        if (!held) cinematics.update(dt);
+        ctx.grass.update(camera.position);
+      }
     }
     camera.updateMatrixWorld();
     trees.lightShadows = perf.shadows;
@@ -460,7 +475,7 @@ async function boot() {
     lod.update();
     if (waterWatch) waterWatch.tick();
     lighting.update();
-    if (look.values.dof > 0) {
+    if (look.values.dof > 0 && !(photo && photo.active)) {
       const subject = play.game.cinematic ? null : play.game.mode === 'foot' ? play.player.state.position : play.car.position;
       const want = subject ? Math.max(2, camera.position.distanceTo(subject)) : 14;
       pipeline.focus += (want - pipeline.focus) * Math.min(1, dt * 5);
@@ -475,9 +490,14 @@ async function boot() {
     const dt = Math.min(raw, 0.05);
     if (!benching) fps += (1 / Math.max(raw, 0.001) - fps) * 0.05;
     ctx.audio.tickMusic(Math.min(raw, 0.1));
-    if (!paused && !benching) {
-      elapsed += dt;
-      renderFrame(dt);
+    if (!paused && !benching && !capturing) {
+      if (photo && photo.active) {
+        photo.update(Math.min(raw, 0.05));
+        renderFrame(0);
+      } else {
+        elapsed += dt;
+        renderFrame(dt);
+      }
     }
     frames++;
     if (frames === 4) {
@@ -491,6 +511,73 @@ async function boot() {
           if (document.activeElement && document.activeElement.click) document.activeElement.click();
         }, 150);
       }
+    }
+  }
+
+  async function capturePhoto({ width, height, fov, detail, onProgress }) {
+    const kept = quality;
+    capturing = true;
+    try {
+      if (detail && quality !== 'cinematic' && quality !== 'extreme') {
+        quality = 'cinematic';
+        applyQuality();
+      }
+      camera.fov = fov;
+      if (width) {
+        renderer.setPixelRatio(1);
+        renderer.setSize(width, height, false);
+        camera.aspect = width / height;
+        pipeline.settings.scale = 1;
+        pipeline.setSize(width, height, 1);
+        trees.setViewport(height);
+        lod.setViewport(height);
+        play.setViewport(height);
+      }
+      camera.updateProjectionMatrix();
+      lighting.resize();
+      pipeline.reset = true;
+      const count = 40;
+      for (let i = 0; i < count; i++) {
+        renderFrame(0);
+        if (i % 4 === 3) {
+          if (onProgress) onProgress((i + 1) / count);
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+      }
+      renderFrame(0);
+      return await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    } finally {
+      quality = kept;
+      applyQuality();
+      capturing = false;
+    }
+  }
+  photo = createPhotoMode({
+    camera, input, canvas, heightAt,
+    baseLook: () => look.values,
+    previewLook: (id) => look.preview(id),
+    applyLook: (values) => (pipeline.look = values),
+    setFocus: (distance) => (pipeline.focus = distance),
+    playerPosition: () => (play.game.mode === 'foot' ? play.player.state.position : play.car.position),
+    setPlayerVisible: (on) => (play.character.group.visible = on),
+    capture: capturePhoto,
+    exit: () => setPhoto(false),
+  });
+  function setPhoto(on) {
+    if (!photo || photo.busy || on === photo.active) return;
+    if (on) {
+      if (lookOpen) showLook(false);
+      if (perfOpen) showPerf(false);
+      document.getElementById('hud').hidden = true;
+      photo.enter();
+      showTool(true);
+    } else {
+      photo.exit();
+      useLook(look.values);
+      document.getElementById('hud').hidden = false;
+      pipeline.reset = true;
+      clock.getDelta();
+      showTool(false);
     }
   }
 
@@ -602,6 +689,10 @@ async function boot() {
     looks: look,
     showLook,
     showPerf,
+    setPhoto,
+    get photo() {
+      return photo;
+    },
     get perfPanel() {
       return perfPanel;
     },

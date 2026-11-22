@@ -460,6 +460,7 @@ export class Pipeline {
     this.reset = true;
     this.settings = { ao: true, fog: true, taa: true, bloom: true, motion: true, scale: 1 };
     this.reflectionGate = null;
+    this.adaptReset = 0;
     this.stage = null;
     this.skipped = 0;
     this.exposure = 0.56;
@@ -564,6 +565,7 @@ export class Pipeline {
     const adapt = [hdr(1, 1, false), hdr(1, 1, false)];
     this.targets = { opaque, scene, ao, work, taa, down, adapt, all: [opaque, scene, ao, work, ...taa, ...down, ...adapt] };
     this.reset = true;
+    this.adaptReset = 3;
     if (this.water) this.water.setSize(w, h);
   }
 
@@ -697,7 +699,8 @@ export class Pipeline {
     au.tSmall.value = t.down[t.down.length - 1].texture;
     au.tPrev.value = adaptPrev.texture;
     au.uRate.value = 1 - Math.exp(-dt * 1.6);
-    au.uReset.value = this.frame < 3 ? 1 : 0;
+    au.uReset.value = this.frame < 3 || this.adaptReset > 0 ? 1 : 0;
+    if (this.adaptReset > 0) this.adaptReset--;
     this.draw(this.adaptMat, adaptCur);
     renderer.autoClear = false;
     for (let i = t.down.length - 2; i >= 0; i--) {

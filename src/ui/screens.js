@@ -9,7 +9,7 @@ const TABS = [['map', 'Map'], ['avatar', 'Avatar'], ['garage', 'Garage'], ['sett
 const QUALITY = [['extreme', 'Extreme'], ['cinematic', 'Cinematic'], ['ultra', 'Ultra'], ['high', 'High'], ['medium', 'Medium'], ['low', 'Low']];
 const FOOT = [['Move', ['W', 'A', 'S', 'D']], ['Camera', ['Mouse']], ['Sprint', ['Shift']], ['Jump', ['Space']], ['Enter car', ['F']]];
 const CAR = [['Throttle and brake', ['W', 'S']], ['Steer', ['A', 'D']], ['Handbrake', ['Space']], ['Exit car', ['F']], ['Radio', ['Q', 'E']], ['Roof', ['T']], ['Lights', ['H']], ['Camera', ['C']], ['Reset car', ['R']]];
-const COMMON = [['Pause', ['Esc']], ['Map and menu', ['M']], ['Look editor', ['O']], ['Quality and speed panel', ['P']]];
+const COMMON = [['Pause', ['Esc']], ['Map and menu', ['M']], ['Photo mode', ['P']], ['Look editor', ['O']], ['Quality and speed panel', ['I']]];
 const ROADSTER = [['Fly up', ['Space']], ['Hold altitude', ['release']], ['Descend and land', ['C']], ['Fly forward and brake', ['W', 'S']], ['Turn', ['A', 'D']], ['Boost', ['Shift']], ['Pitch and roll', ['I', 'K', 'J', 'L']], ['Flight assist', ['G']], ['Handbrake', ['X']], ['Camera', ['V']]];
 const HELI = [['Climb', ['Space']], ['Hold altitude', ['release']], ['Descend and land', ['C']], ['Fly forward, brake and back up', ['W', 'S']], ['Turn', ['A', 'D']], ['Fly fast', ['Shift']], ['Landing light', ['H']], ['Camera', ['V']]];
 const AVATARS = [{ id: 'default', name: 'Default', note: 'Everyday summer clothes', figure: 'plain' }];
@@ -142,7 +142,7 @@ export function createScreens(options = {}) {
   function buildControls(single = false) {
     return el('div', { class: 'sc-controls' },
       el('div', { class: `sc-keys-grid${single ? ' one' : ''}` }, keyCol('On foot', FOOT), keyCol('In the car', CAR), keyCol('Roadster', ROADSTER), keyCol('Helicopter', HELI)),
-      el('div', { class: 'sc-keys-common' }, keyCol('Anywhere', cfg.lookTools ? COMMON : COMMON.slice(0, 2))));
+      el('div', { class: 'sc-keys-common' }, keyCol('Anywhere', cfg.lookTools ? COMMON : COMMON.slice(0, 3))));
   }
 
   function buildPanel(name, heading, body) {

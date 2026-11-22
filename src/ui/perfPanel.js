@@ -161,7 +161,7 @@ export function createPerfPanel(api, { onClose }) {
   done.addEventListener('click', () => onClose());
 
   const panel = el('aside', { id: 'perf', class: 'lk-panel', 'aria-label': 'Quality and speed' },
-    el('header', { class: 'lk-head' }, el('h2', { text: 'Quality and speed' }), el('span', { class: 'lk-hint', text: 'Switches apply at once, the game keeps running. Keys 1 to 6 change quality while this is open. P or a click on the game closes it.' })),
+    el('header', { class: 'lk-head' }, el('h2', { text: 'Quality and speed' }), el('span', { class: 'lk-hint', text: 'Switches apply at once, the game keeps running. Keys 1 to 6 change quality while this is open. I or a click on the game closes it.' })),
     qualityRow, note,
     el('section', { class: 'lk-group' }, el('h3', { text: 'Right now' }), readout),
     el('section', { class: 'lk-group' }, el('h3', { text: 'Speed-ups that keep the picture' }), switches),

@@ -35,10 +35,10 @@ html, body { margin: 0; height: 100%; background: #0b0d0c; overflow: hidden; fon
 #net { position: fixed; left: 28px; top: 62px; z-index: 12; pointer-events: none; color: rgba(246, 241, 231, 0.72); font: 600 11px/1.5 -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif; letter-spacing: 0.14em; text-transform: uppercase; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45); }
 #net b { display: block; font-weight: 600; letter-spacing: 0.02em; text-transform: none; font-size: 13px; color: #f6f1e7; }
 
-#look, #perf { position: fixed; top: 16px; right: 16px; bottom: 16px; z-index: 30; box-sizing: border-box; width: 336px; max-width: calc(100vw - 32px); padding: 16px 16px 0; overflow-y: auto; border-radius: 20px; background: rgba(16, 13, 10, 0.8); backdrop-filter: blur(22px) saturate(1.2); -webkit-backdrop-filter: blur(22px) saturate(1.2); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.09); color: #f6f1e7; font: 500 13px/1.35 -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif; }
-#look[hidden], #perf[hidden] { display: none; }
-#look h2, #perf h2 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
-#look h3, #perf h3 { margin: 18px 0 8px; font-size: 10.5px; font-weight: 650; letter-spacing: 0.18em; text-transform: uppercase; color: #f2a23a; }
+#look, #perf, #photo { position: fixed; top: 16px; right: 16px; bottom: 16px; z-index: 30; box-sizing: border-box; width: 336px; max-width: calc(100vw - 32px); padding: 16px 16px 0; overflow-y: auto; border-radius: 20px; background: rgba(16, 13, 10, 0.8); backdrop-filter: blur(22px) saturate(1.2); -webkit-backdrop-filter: blur(22px) saturate(1.2); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.09); color: #f6f1e7; font: 500 13px/1.35 -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif; }
+#look[hidden], #perf[hidden], #photo[hidden], #photo-frame[hidden] { display: none; }
+#look h2, #perf h2, #photo h2 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+#look h3, #perf h3, #photo h3 { margin: 18px 0 8px; font-size: 10.5px; font-weight: 650; letter-spacing: 0.18em; text-transform: uppercase; color: #f2a23a; }
 .lk-head { display: grid; gap: 4px; margin-bottom: 12px; }
 .lk-hint, .lk-note { color: rgba(246, 241, 231, 0.6); font-size: 12px; }
 .lk-note { min-height: 16px; margin-top: 10px; }
@@ -53,6 +53,10 @@ html, body { margin: 0; height: 100%; background: #0b0d0c; overflow: hidden; fon
 .lk-main { grid-column: 1 / -1; background: #f2a23a; color: #1c1408; }
 .lk-main:hover { background: #f6b25a; }
 #perf { right: auto; left: 16px; width: 372px; }
+#photo { width: 316px; }
+#photo .lk-foot .lk-main { grid-column: auto; }
+#photo-frame { position: fixed; z-index: 20; pointer-events: none; box-shadow: 0 0 0 100vmax rgba(8, 6, 4, 0.55); outline: 1px solid rgba(246, 241, 231, 0.5); }
+.ph-sizes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
 .pf-quality { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .pf-quality .lk-chip { display: grid; gap: 2px; }
 .pf-quality small { font-size: 10px; font-weight: 600; opacity: 0.55; }
