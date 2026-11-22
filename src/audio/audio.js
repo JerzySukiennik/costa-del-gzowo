@@ -1,6 +1,6 @@
 // Costa del Gzowo: game audio from real recordings (engine layers, tyres, impacts, water, ambience, footsteps) mixed by gameplay state.
 import { WORLD } from '../config.js';
-import { riverCenter, riverHalfWidth } from '../world/heightfield.js';
+import { riverCenter, riverHalfWidth, coastDistance } from '../world/heightfield.js';
 import { GROUND } from '../world/terrain.js';
 
 const FILES = ['engine_low', 'engine_high', 'skid', 'gravel', 'wind', 'scrape', 'crash1', 'crash2', 'crash3', 'glass', 'door_open', 'door_close', 'river', 'birds', 'trees', 'splash_big', 'splash_small', 'underwater', 'steps_gravel', 'steps_concrete', 'steps_grass', 'steps_water', 'swim', 'plastic', 'roof'];
@@ -43,15 +43,21 @@ export async function createAudio(ctx) {
     }),
   );
 
-  function loop(name, { gain = 0, rate = 1, pan = false } = {}) {
+  const engineTone = ac.createBiquadFilter();
+  engineTone.type = 'lowpass';
+  engineTone.frequency.value = 1600;
+  engineTone.Q.value = 0.6;
+  engineTone.connect(master);
+
+  function loop(name, { gain = 0, rate = 1, pan = false, out = master } = {}) {
     const buffer = buffers[name];
     const g = ac.createGain();
     g.gain.value = gain;
     const p = pan ? ac.createStereoPanner() : null;
     if (p) {
       g.connect(p);
-      p.connect(master);
-    } else g.connect(master);
+      p.connect(out);
+    } else g.connect(out);
     let source = null;
     return {
       gain: g.gain,
@@ -79,8 +85,8 @@ export async function createAudio(ctx) {
   }
 
   const loops = {
-    engineLow: loop('engine_low', { pan: true }),
-    engineHigh: loop('engine_high', { pan: true }),
+    engineLow: loop('engine_low', { pan: true, out: engineTone }),
+    engineHigh: loop('engine_high', { pan: true, out: engineTone }),
     skid: loop('skid'),
     gravel: loop('gravel'),
     wind: loop('wind'),
@@ -257,8 +263,10 @@ export async function createAudio(ctx) {
       const rpm = cs.rpm;
       const on = cs.engineOn && !cs.stalled ? 1 : 0;
       const load = 0.55 + 0.45 * cs.throttle;
+      const shift = cs.shifting > 0 ? 0.55 : 1;
+      engineTone.frequency.setTargetAtTime(900 + 9000 * cs.throttle ** 1.4 * shift + rpm * 0.35, ac.currentTime, cs.throttle > 0.5 ? 0.04 : 0.12);
       loops.engineLow.set(on * carGain * (1 - smooth(1900, 3600, rpm)) * (0.5 + 0.3 * cs.throttle), 0.06);
-      loops.engineHigh.set(on * carGain * smooth(1400, 3200, rpm) * load * 0.8, 0.06);
+      loops.engineHigh.set(on * carGain * smooth(1400, 3200, rpm) * load * 0.8 * shift, 0.06);
       loops.engineLow.setRate(clamp(rpm / 950, 0.7, 3.2));
       loops.engineHigh.setRate(clamp(rpm / 4300, 0.42, 1.75));
       if (loops.engineLow.pan) loops.engineLow.pan.value = inside ? 0 : s.pan;
@@ -266,8 +274,10 @@ export async function createAudio(ctx) {
       const speed = cs.speed;
       const hard = car.wheels.some((w) => w.contact && (w.surface === 'asphalt' || w.surface === 'concrete'));
       const loose = car.wheels.reduce((a, w) => a + (w.contact ? w.surf.loose : 0), 0) / 4;
-      loops.skid.set(hard ? clamp(cs.skid * 1.3, 0, 0.9) * carGain : 0, 0.05);
-      loops.skid.setRate(0.85 + clamp(speed / 60, 0, 0.4));
+      const slip = car.wheels.reduce((a, w) => Math.max(a, w.contact ? w.slip : 0), 0);
+      const scrub = smooth(0.6, 1.15, slip) * clamp(speed / 12, 0, 1) * 0.2;
+      loops.skid.set(hard ? Math.max(clamp(cs.skid * 1.3, 0, 0.9), scrub) * carGain : 0, 0.05);
+      loops.skid.setRate(0.72 + 0.14 * clamp(cs.skid * 2, 0, 1) + clamp(speed / 60, 0, 0.4));
       loops.gravel.set(clamp(loose * (speed / 14 + cs.skid), 0, 0.9) * carGain + (hard ? clamp(speed / 55, 0, 0.35) * carGain * 0.5 : 0), 0.1);
       loops.gravel.setRate(0.7 + clamp(speed / 40, 0, 0.8));
       const camSpeed = inside ? speed : player.state.speed + (player.state.grounded ? 0 : Math.abs(player.state.vy));
@@ -277,7 +287,7 @@ export async function createAudio(ctx) {
       loops.scrape.set(scrapeLevel * 0.8 * carGain, 0.04);
       const cx = camera.position.x;
       const cz = camera.position.z;
-      const toRiver = Math.max(0, Math.abs(cx - riverCenter(cz)) - riverHalfWidth(cz));
+      const toRiver = Math.min(Math.max(0, Math.abs(cx - riverCenter(cz)) - riverHalfWidth(cz)), Math.max(0, coastDistance(cx, cz)));
       const height = Math.max(0, camera.position.y - WORLD.waterLevel);
       const riverGain = 0.75 / (1 + (Math.hypot(toRiver, height * 0.6) / 14) ** 2);
       loops.river.set(riverGain * (1 - underwater) * (1 - inside * clamp(speed / 30, 0, 0.6)), 0.3);

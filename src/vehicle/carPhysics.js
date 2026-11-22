@@ -1,4 +1,4 @@
-// Costa del Gzowo: vehicle dynamics (raycast suspension, combined-slip tyres, AWD drivetrain with automatic gearbox, brakes with ABS, aero, buoyancy).
+// Costa del Gzowo: vehicle dynamics (raycast suspension, combined-slip tyres, AWD drivetrain with automatic gearbox, brakes with ABS, aero, buoyancy, and slide help: extra steering lock, a little self-countersteer and a rear torque bias while drifting).
 import * as THREE from 'three';
 import { WORLD } from '../config.js';
 import { GROUPS, groups } from '../core/physics.js';
@@ -76,7 +76,7 @@ export function createCarPhysics({ physics, terrain, model, spawn }) {
 
   const state = {
     throttle: 0, brake: 0, steerInput: 0, handbrake: 0, steer: 0, gear: 1, rpm: IDLE, speed: 0, forwardSpeed: 0, shifting: 0, engineOn: true, occupied: false,
-    submersion: 0, flood: 0, stalled: false, airborne: false, onGround: 4, engineLoad: 0, waterDepth: 0, lastShift: 0, reverse: false, skid: 0, gForce: new THREE.Vector3(), inWater: false,
+    submersion: 0, flood: 0, stalled: false, airborne: false, onGround: 4, engineLoad: 0, waterDepth: 0, lastShift: 0, reverse: false, skid: 0, gForce: new THREE.Vector3(), inWater: false, drift: 0, slideAngle: 0,
   };
   const controls = { throttle: 0, brake: 0, steer: 0, handbrake: false };
 
@@ -170,7 +170,8 @@ export function createCarPhysics({ physics, terrain, model, spawn }) {
       if (state.shifting > 0) torque *= 0.15;
     }
     const slipping = wheels.reduce((a, w) => Math.max(a, w.contact ? w.slipRatio : 0), 0);
-    if (slipping > 0.24 && state.throttle > 0.2) torque *= clamp(1 - (slipping - 0.24) * 3.2, 0.25, 1);
+    const slipLimit = 0.24 + 0.55 * state.drift;
+    if (slipping > slipLimit && state.throttle > 0.2) torque *= clamp(1 - (slipping - slipLimit) * 3.2, 0.25 + 0.4 * state.drift, 1);
     state.engineLoad = state.throttle;
     return torque * ratio * 0.9 * (state.powerScale ?? 1);
   }
@@ -179,9 +180,21 @@ export function createCarPhysics({ physics, terrain, model, spawn }) {
     readBody();
     const driveTorque = updateDrivetrain(dt);
     const speedAbs = Math.abs(state.forwardSpeed);
+    const slide = state.forwardSpeed > 3 && state.onGround >= 2 ? Math.atan2(vel.dot(right), state.forwardSpeed) : 0;
+    state.slideAngle = slide;
+    const drifting = state.occupied ? clamp((Math.abs(slide) - 0.07) / 0.3, 0, 1) * clamp(state.speed / 9, 0, 1) : 0;
+    state.drift += (drifting - state.drift) * Math.min(1, dt * (drifting > state.drift ? 10 : 3));
     const maxSteer = THREE.MathUtils.lerp(0.6, 0.11, clamp(speedAbs / 42, 0, 1) ** 0.75);
-    const steerTarget = (state.occupied ? controls.steer * maxSteer : 0) + (state.steerBias ?? 0);
-    const rate = (Math.abs(steerTarget) > Math.abs(state.steer) ? 1.9 : 3.2) * (0.55 + 0.45 * maxSteer / 0.6);
+    const catchLock = maxSteer + 0.42 * state.drift;
+    const steerTarget = clamp((state.occupied ? controls.steer * maxSteer : 0) - slide * 0.5 * state.drift, slide > 0 ? -catchLock : -maxSteer, slide < 0 ? catchLock : maxSteer) + (state.steerBias ?? 0);
+    if (state.drift > 0.01) {
+      const yawRate = ang.dot(up);
+      const past = Math.max(0, Math.abs(slide) - 0.4);
+      const growing = slide * yawRate > 0 ? yawRate : 0;
+      const pull = -Math.sign(slide) * past * 9 - growing * 2.6 * clamp(past * 6, 0, 1);
+      if (pull !== 0) body.applyTorqueImpulse(tmp.copy(up).multiplyScalar(pull * 2750 * dt), true);
+    }
+    const rate = (Math.abs(steerTarget) > Math.abs(state.steer) ? 1.9 : 3.2) * (0.55 + 0.45 * maxSteer / 0.6) * (1 + 1.2 * state.drift);
     state.steer += clamp(steerTarget - state.steer, -rate * dt, rate * dt);
     let grounded = 0;
     let skid = 0;
@@ -236,7 +249,7 @@ export function createCarPhysics({ physics, terrain, model, spawn }) {
 
     wheels.forEach((w, i) => {
       const steer = w.front ? state.steer : 0;
-      const share = w.front ? 0.2 : 0.3;
+      const share = w.front ? 0.2 - 0.1 * state.drift : 0.3 + 0.1 * state.drift;
       const brakeTorque = state.brake * (w.front ? 3300 : 1900) * w.brakeHold + (w.front ? 0 : state.handbrake * 4200);
       let fz = 0;
       if (w.contact) {
