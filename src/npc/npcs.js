@@ -1,6 +1,7 @@
 // Costa del Gzowo: the living world (pedestrians and road traffic) as one system with shared knowledge of vehicles, signals, crashes and aircraft, plus debugging helpers.
 import { loadPeds } from './ped/assets.js';
 import { createPeds } from './ped/peds.js';
+import { setPedDaylight } from './ped/material.js';
 import { createTraffic } from './traffic/traffic.js';
 import { createNpcAudio } from './npcAudio.js';
 import { POPULATION } from './util.js';
@@ -130,6 +131,7 @@ export async function createNpcs(ctx, play) {
     world, peds, traffic, audio, pack,
     update(dt, time) {
       elapsed = time;
+      setPedDaylight(ctx.lighting ? ctx.lighting.ambientScale : 1);
       sense(dt);
       traffic.update(dt);
       peds.update(dt);

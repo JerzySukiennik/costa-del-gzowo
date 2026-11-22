@@ -1,7 +1,7 @@
-// Costa del Gzowo: helper that injects world-space varyings and custom color/roughness snippets into standard materials.
+// Costa del Gzowo: helper that injects world-space varyings and custom color/roughness snippets into standard materials; alpha marks moving things (0) and soft bodies that take little screen-space occlusion (0.25).
 export function hookMaterial(material, { key, uniforms = {}, pars = '', fragPars = null, color = '', rough = '', normal = '', vertex = '', physical = '', emissive = '', final = '', dynamic = false }) {
   material.userData.customShader = true;
-  material.customProgramCacheKey = () => key + (dynamic ? '-dyn' : '');
+  material.customProgramCacheKey = () => key + (dynamic === 'soft' ? '-soft' : dynamic ? '-dyn' : '');
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
@@ -36,7 +36,7 @@ export function hookMaterial(material, { key, uniforms = {}, pars = '', fragPars
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + normal)
       .replace('#include <lights_physical_fragment>', '#include <lights_physical_fragment>\n' + physical)
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n' + emissive)
-      .replace('#include <dithering_fragment>', '#include <dithering_fragment>\n' + final + (dynamic ? '\ngl_FragColor.a = 0.0;' : ''));
+      .replace('#include <dithering_fragment>', '#include <dithering_fragment>\n' + final + (dynamic ? `\ngl_FragColor.a = ${dynamic === 'soft' ? '0.25' : '0.0'};` : ''));
   };
   return material;
 }

@@ -56,7 +56,7 @@ vec3 chBump(vec3 n, float h) {
 
 function make(ctx, Kind, params, key, hooks) {
   const m = new Kind(params);
-  hookMaterial(m, { ...hooks, key: 'character-' + key, dynamic: true, pars: VERT_PARS, vertex: VERT, fragPars: FRAG_PARS + (hooks.pars || ''), uniforms: hooks.uniforms || {} });
+  hookMaterial(m, { ...hooks, key: 'character-' + key, dynamic: 'soft', pars: VERT_PARS, vertex: VERT, fragPars: FRAG_PARS + (hooks.pars || ''), uniforms: hooks.uniforms || {} });
   ctx.lighting.register(m);
   return m;
 }

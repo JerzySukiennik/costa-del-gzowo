@@ -86,6 +86,7 @@ void main() {
       }
     }
     ao = sum / wsum;
+    ao = mix(ao, 1.0, 0.75 * step(0.15, c.a) * step(c.a, 0.4));
   }
   vec3 lifted = mix(vec3(ao), vec3(1.0), clamp(c.rgb * 0.12, 0.0, 0.6));
   outColor = vec4(c.rgb * lifted, c.a);
