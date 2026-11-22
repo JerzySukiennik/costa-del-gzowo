@@ -158,6 +158,7 @@ export async function createMultiplayer(ctx, play, profile, hooks = {}) {
       extra[2] = clamp(Math.round(cs.pitch * 127 + 128), 0, 255);
       extra[3] = clamp(Math.round(cs.roll * 127 + 128), 0, 255);
     } else if (item.netExtra) item.netExtra(extra);
+    if (c.netPack) c.netPack(extra);
     const p = m.group.position;
     const q = m.group.quaternion;
     const w = c.body.angvel();
@@ -225,6 +226,7 @@ export async function createMultiplayer(ctx, play, profile, hooks = {}) {
       sim.thrusters.sideDeploy = s.extra[4] / 255;
       sim.thrusters.flap = s.extra[0] > 20 ? 1 : 0;
     } else if (item.netApply) item.netApply(s, dt);
+    else if (c.netApply) c.netApply(s);
     else {
       Object.assign(cs, { rotor: s.extra[0] / 255, lift: s.extra[1] / 100, pitch: (s.extra[2] - 128) / 127, roll: (s.extra[3] - 128) / 127, rotorBroken: (s.vflags & VFLAG.ROTOR_BROKEN) !== 0 });
     }

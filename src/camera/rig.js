@@ -133,7 +133,9 @@ export function createCameraRig({ camera, physics }) {
     const ground = heightAt(desired.x, desired.z);
     if (desired.y < ground + 0.3) desired.y = ground + 0.3;
     const level = water ? water.getHeightAt(desired.x, desired.z) : WORLD.waterLevel;
-    if (rig.mode === 'car' && ground < level && desired.y < level + 0.45) desired.y = level + 0.45;
+    const diving = rig.mode === 'car' && car.state.submerged;
+    if (rig.mode === 'car' && !diving && ground < level && desired.y < level + 0.45) desired.y = level + 0.45;
+    if (diving && desired.y > level - 0.35) desired.y = level - 0.35;
     if (ground < level && Math.abs(desired.y - level) < 0.16) desired.y = level + (desired.y >= level ? 0.16 : -0.16);
 
     if (!initialized) lookSmooth.copy(look);

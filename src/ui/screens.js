@@ -14,6 +14,7 @@ const COMMON = [['Pause', ['Esc']], ['Map and menu', ['M']], ['Photo mode', ['P'
 const ROADSTER = [['Fly up', ['Space']], ['Hold altitude', ['release']], ['Descend and land', ['C']], ['Fly forward and brake', ['W', 'S']], ['Turn', ['A', 'D']], ['Boost', ['Shift']], ['Pitch and roll', ['I', 'K', 'J', 'L']], ['Flight assist', ['G']], ['Handbrake', ['X']], ['Camera', ['V']]];
 const CYBER = [['Drive and brake', ['W', 'S']], ['Steer, all four wheels', ['A', 'D']], ['Spin on the spot', ['Space', 'A', 'D']], ['Spin around the nose', ['Space', 'W', 'A', 'D']], ['Drift at speed', ['Space']], ['Vault cover', ['T']], ['Ride height', ['G']], ['Cockpit view', ['V']], ['Lights', ['H']]];
 const HELI = [['Climb', ['Space']], ['Hold altitude', ['release']], ['Descend and land', ['C']], ['Fly forward, brake and back up', ['W', 'S']], ['Turn', ['A', 'D']], ['Fly fast', ['Shift']], ['Landing light', ['H']], ['Camera', ['V']]];
+const BOAT = [['Throttle and astern', ['W', 'S']], ['Steer', ['A', 'D']], ['Full power', ['Shift']], ['Dive or surface (dive boat)', ['G']], ['Rise and sink when dived', ['Space', 'C']], ['Lights', ['H']], ['Camera', ['V']], ['Board or leave', ['F']]];
 const AVATARS = [{ id: 'default', name: 'Default', note: 'Everyday summer clothes', figure: 'plain' }];
 const AVATARS_SOON = ['Driver', 'Swimmer'];
 const VEHICLES = [{ id: 'convertible', name: 'Convertible', specs: { power: '400 hp', drive: 'AWD', mass: '1650 kg' } }];
@@ -165,7 +166,7 @@ export function createScreens(options = {}) {
 
   function buildControls(single = false) {
     return el('div', { class: 'sc-controls' },
-      el('div', { class: `sc-keys-grid${single ? ' one' : ''}` }, keyCol('On foot', FOOT), keyCol('In the car', CAR), keyCol('Roadster', ROADSTER), keyCol('Helicopter', HELI), keyCol('Cyber Truck', CYBER)),
+      el('div', { class: `sc-keys-grid${single ? ' one' : ''}` }, keyCol('On foot', FOOT), keyCol('In the car', CAR), keyCol('Roadster', ROADSTER), keyCol('Helicopter', HELI), keyCol('Cyber Truck', CYBER), keyCol('Boats', BOAT)),
       el('div', { class: 'sc-keys-common' }, keyCol('Anywhere', cfg.lookTools ? COMMON : COMMON.slice(0, 3))));
   }
 
@@ -299,7 +300,7 @@ export function createScreens(options = {}) {
     });
     return el('div', { class: 'sc-tab-panel', 'data-tab-panel': 'garage' },
       el('div', { class: 'sc-cars' }, cards),
-      el('div', { class: 'sc-car-note', text: 'Every vehicle is parked by the bridge. Pick one to be taken to its door.' }));
+      el('div', { class: 'sc-car-note', text: 'Cars and aircraft wait by the bridge, boats at the marina. Pick one to be taken to it.' }));
   }
 
   const playersBox = el('div', { class: 'sc-players' }, el('div', { class: 'sc-player' }, el('span', { text: 'Playing alone' })));

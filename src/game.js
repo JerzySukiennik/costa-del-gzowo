@@ -166,7 +166,8 @@ export async function createGame(ctx) {
     const water = game.water;
     interactors.length = 0;
     const cs = car.state;
-    if (cs.inWater) {
+    if (car.ownWater) carWasWet = true;
+    else if (cs.inWater) {
       carInteractor.position.copy(car.position).addScaledVector(car.up, 0.55);
       carInteractor.velocity.copy(car.velocity);
       carInteractor.quaternion.copy(car.quaternion);
@@ -203,6 +204,7 @@ export async function createGame(ctx) {
       playerInteractor.submersion = Math.min(1, ps.depth / 1.6);
       interactors.push(playerInteractor);
     }
+    for (const item of fleet) if (item.car.ownWater) item.car.ownWater(dt, interactors);
     if (water) water.setInteractors(interactors);
     for (const e of player.events.splice(0)) {
       if (e.type === 'splash') {

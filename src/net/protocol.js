@@ -1,5 +1,5 @@
 // Costa del Gzowo: the state packet every player broadcasts (own character plus every shared vehicle they currently simulate) and its decoder.
-export const KINDS = ['convertible', 'roadster', 'heli', 'cybertruck'];
+export const KINDS = ['convertible', 'roadster', 'heli', 'cybertruck', 'speedboat', 'foilboat', 'diver', 'yacht'];
 export const PARTS = ['frontBumper', 'rearBumper', 'hood', 'trunk', 'doorFL', 'doorFR'];
 export const FLAG = { GROUNDED: 1, SWIM: 2 };
 export const VFLAG = { BURNING: 1, EXPLODED: 2, ROTOR_BROKEN: 4, OCCUPIED: 8, BEAMS: 16, BRAKE: 32, REVERSE: 64 };

@@ -17,6 +17,7 @@ import { createPlants } from './world/plants.js';
 import { createGrass } from './world/grass.js';
 import { createProps } from './world/props.js';
 import { createTown } from './world/town/town.js';
+import { createPort } from './world/port/port.js';
 import { createFallbackWater } from './world/fallbackWater.js';
 import { heightAt, flowAt } from './world/heightfield.js';
 import { createGame } from './game.js';
@@ -154,6 +155,8 @@ async function boot() {
   status('Building Gzowo Springs');
   await nextFrame();
   ctx.town = await createTown(ctx);
+  status('Building the marina');
+  ctx.port = await createPort(ctx);
 
   trees.forceMeshes();
   const townCorners = [[TOWN.x0, TOWN.z0], [TOWN.x1, TOWN.z0], [TOWN.x0, TOWN.z1], [TOWN.x1, TOWN.z1]].flatMap(([x, z]) => [new THREE.Vector3(x, 0, z), new THREE.Vector3(x + 40, 30, z)]);
@@ -177,7 +180,7 @@ async function boot() {
   for (const item of play.fleet) lod.watch(item.model.group);
   if (play.statues) for (const item of play.statues.items) lod.watch(item.rig.group);
   const modelCull = createModelCull({ camera, perf });
-  for (const item of play.fleet) modelCull.watch(item.model.group, item.id === 'heli' ? 9 : 6);
+  for (const item of play.fleet) modelCull.watch(item.model.group, item.model.cullRadius || (item.id === 'heli' ? 9 : 6));
   if (play.statues) for (const item of play.statues.items) modelCull.watch(item.rig.group, 1.8, 1);
   lighting.setStage((name, on, light) => {
     const cascade = lighting.csm.lights.indexOf(light);
@@ -268,8 +271,8 @@ async function boot() {
   hooks.vehicle = (id) => {
     const item = play.fleet.find((f) => f.id === id && f.driver < 0 && !f.car.state.occupied);
     if (!item || play.game.mode !== 'foot' || play.game.transition) return;
-    const spot = item.model.group.localToWorld(item.entry.doorLocal.clone());
-    play.player.teleport(spot.x, heightAt(spot.x, spot.z), spot.z, play.player.state.yaw);
+    const spot = item.entry.dockSpot ? item.entry.dockSpot() : item.model.group.localToWorld(item.entry.doorLocal.clone());
+    play.player.teleport(spot.x, item.entry.dockSpot ? spot.y : heightAt(spot.x, spot.z), spot.z, play.player.state.yaw);
     if (hooks.resume) hooks.resume();
   };
   hooks.name = (value) => {
@@ -501,6 +504,7 @@ async function boot() {
     trees.update(camera);
     modelCull.update();
     ctx.town.update(dt, elapsed, camera);
+    ctx.port.update(dt, play.game.water);
     const reach = ctx.cullScale || 1;
     for (const c of ctx.cull) c.object.visible = (c.x - camera.position.x) ** 2 + (c.z - camera.position.z) ** 2 < (c.range * reach) ** 2;
     ctx.grass.culling = perf.grass;

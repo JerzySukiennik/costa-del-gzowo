@@ -59,7 +59,9 @@ export const HARBOUR = {
   z0: 96,
   z1: 112,
   ground: 1.6,
-  depth: 4.6,
+  depth: 4.7,
+  channel: 11,
+  ramps: [168, 214],
 };
 
 export const LAYERS = {
@@ -97,6 +99,21 @@ export const SPAWN = {
   player: { x: -119.6, z: 21.6, yaw: 1.45 },
 };
 
+export const PORT = { x: 204, z: 112, heading: -Math.PI / 2 };
+
+export function portPoint(u, v, turn = 0) {
+  const c = Math.cos(PORT.heading);
+  const s = Math.sin(PORT.heading);
+  return { x: PORT.x + c * u - s * v, z: PORT.z - s * u - c * v, yaw: PORT.heading + turn };
+}
+
+export const BOATS = [
+  { id: 'speedboat', ...portPoint(9.5, -14.2, -Math.PI / 2), dock: portPoint(6, -14.2) },
+  { id: 'foilboat', ...portPoint(16.5, -14.2, -Math.PI / 2), dock: portPoint(13, -14.2) },
+  { id: 'diver', ...portPoint(23.5, -14.2, -Math.PI / 2), dock: portPoint(20, -14.2) },
+  { id: 'yacht', ...portPoint(14.6, 16), dock: portPoint(-0.5, 16) },
+];
+
 export const FLEET = [
   { id: 'convertible', x: -113.5, z: 20.4, yaw: 0.12 },
   { id: 'convertible', x: -113.5, z: 16.8, yaw: 0.12, color: 0x0c3f52, plate: 'GZW 27' },
@@ -105,6 +122,7 @@ export const FLEET = [
   { id: 'heli', x: -127, z: 14, yaw: 0.12 },
   { id: 'heli', x: -138.5, z: 14, yaw: 0.12 },
   { id: 'cybertruck', x: -120.2, z: 7.9, yaw: 0.12 },
+  ...BOATS,
 ];
 
 export const STATUES = [

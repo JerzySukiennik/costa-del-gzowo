@@ -1,7 +1,7 @@
 // Costa del Gzowo: terrain chunks, baked splat maps, layered PBR ground shader and the physics heightfield.
 import * as THREE from 'three';
 import { BRIDGE, ROAD, TOWN, WORLD } from '../config.js';
-import { heightAt, trackInfo, townSigned, fbm, smooth, clamp } from './heightfield.js';
+import { heightAt, trackInfo, townSigned, marinaGround, fbm, smooth, clamp } from './heightfield.js';
 import { inYard } from './town/layout.js';
 
 export const GROUND = { GRASS: 0, FOREST: 1, MUD: 2, PEBBLES: 3, SAND: 4, GRAVEL: 5, DIRT: 6, ROCK: 7 };
@@ -83,6 +83,7 @@ function bakeSplat(heights) {
         hard = Math.max(hard, 1 - smooth(0.4, 2.9, edge));
       }
       hard = Math.max(hard, 1 - smooth(-1.5, 2.2, rectDistance(x, z, ROAD.pullOff) + (n2 - 0.5) * 2.4));
+      if (x > 100 && z > 50) hard = Math.max(hard, marinaGround(x, z));
       const tr = trackInfo(x, z);
       let track = 0;
       if (tr.dist < tr.halfWidth + 2) {

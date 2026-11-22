@@ -141,7 +141,7 @@ export async function buildFurniture(T) {
   signPost(360, 9.9, [{ item: I.xing, w: 0.6, yaw: -Math.PI / 2, h: 2.2 }]);
 
   for (const c of CROSS) {
-    for (const s of [-1, 1]) {
+    for (const s of [-1]) {
       const F = at(c.x, s * 65).fine;
       F.with({ layer: L.FLAT, color: [0.95, 0.95, 0.92], wear: 0.5, rough: 0.5, metal: 0.4 }, () => F.box(c.x - 4.2, streetY(c.x, s * 65.6) + 0.5, s * 65.6 - 0.1, c.x + 4.2, streetY(c.x, s * 65.6) + 0.85, s * 65.6 + 0.1));
       F.with({ layer: L.SHUTTER, color: [0.9, 0.3, 0.1], wear: 0.5, rough: -1 }, () => {

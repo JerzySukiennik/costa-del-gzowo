@@ -1,5 +1,6 @@
 // Costa del Gzowo: analytic terrain height (an island cut by the river strait, with a harbour bay), coast distance and river flow, shared by terrain mesh, physics, vegetation and water.
 import { BRIDGE, HARBOUR, ROAD, TOWN, WORLD } from '../config.js';
+import { SITE, portLocal } from './port/site.js';
 
 export const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 export const smooth = (a, b, x) => {
@@ -200,14 +201,38 @@ export function heightAt(x, z) {
   }
   const quay = rectDistance(x, z, HARBOUR);
   if (quay < 14) y = mix(HARBOUR.ground, y, smooth(0, 14, quay) * (z > HARBOUR.z1 ? 1 : smooth(0, 14, quay)));
+  if (z > TOWN.z1 && z < HARBOUR.z0 + 2) {
+    for (const rx of HARBOUR.ramps) {
+      const off = Math.abs(x - rx);
+      if (off > 10) continue;
+      const grade = mix(TOWN.street - 0.05, HARBOUR.ground, clamp((z - TOWN.z1 - 0.5) / (HARBOUR.z0 - TOWN.z1 - 1), 0, 1));
+      y = mix(grade, y, smooth(4.6, 10, off));
+    }
+  }
   if (z > HARBOUR.z1 - 0.5 && x > HARBOUR.x0 - 30 && x < HARBOUR.x1 + 30) {
     const side = Math.max(0, HARBOUR.x0 - x, x - HARBOUR.x1);
-    const basin = -HARBOUR.depth * (1 - smooth(46, 96, z - HARBOUR.z1)) * (1 - smooth(4, 30, side)) * smooth(-0.5, 1.5, z - HARBOUR.z1);
+    const out = z - HARBOUR.z1;
+    const deep = HARBOUR.depth + (HARBOUR.channel - HARBOUR.depth) * smooth(40, 64, out);
+    const basin = -deep * (1 - smooth(150, 240, out)) * (1 - smooth(4, 30, side)) * smooth(-0.5, 1.5, out);
     if (basin < y) y = basin;
+  }
+  if (quay < 30 && z > HARBOUR.z0) {
+    const slip = SITE.slipway;
+    const port = portLocal(x, z);
+    if (port.v > slip.v0 - 0.8 && port.v < slip.v1 + 0.8 && port.u > slip.u0 - 0.5 && port.u < slip.u1 + 3) {
+      const under = mix(slip.top, slip.bottom, clamp((port.u - slip.u0) / (slip.u1 - slip.u0), 0, 1)) - 0.35;
+      if (under < y) y = under;
+    }
   }
   const rim = WORLD.half - Math.max(ax, az);
   if (rim < 70) y = Math.min(y, -16 + 15.6 * smooth(0, 70, rim));
   return y;
+}
+
+export function marinaGround(x, z) {
+  let k = 1 - smooth(-1, 2.5, rectDistance(x, z, HARBOUR));
+  if (z > TOWN.z1 - 6 && z < HARBOUR.z0 + 2) for (const rx of HARBOUR.ramps) k = Math.max(k, 1 - smooth(3.6, 5.6, Math.abs(x - rx)));
+  return k;
 }
 
 export function depthAt(x, z) {

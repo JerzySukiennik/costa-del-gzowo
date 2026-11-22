@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { BRIDGE, HARBOUR, ROAD, TOWN, WORLD } from '../config.js';
 import { heightAt, trackInfo } from './heightfield.js';
+import { portClear } from './port/site.js';
 
 export function rng(seed) {
   let s = seed >>> 0;
@@ -24,7 +25,7 @@ export function clearOfBuilt(x, z, margin = 0) {
   if (tr.dist < tr.halfWidth + 1.2 + margin) return false;
   if (x > TOWN.x0 - 8 - margin && x < TOWN.x1 + 8 + margin && z > TOWN.z0 - 8 - margin && z < TOWN.z1 + 8 + margin) return false;
   if (x > HARBOUR.x0 - 10 - margin && x < HARBOUR.x1 + 10 + margin && z > TOWN.z1 - margin && z < HARBOUR.z1 + 4) return false;
-  return true;
+  return portClear(x, z, margin);
 }
 
 export function slopeAt(x, z) {
