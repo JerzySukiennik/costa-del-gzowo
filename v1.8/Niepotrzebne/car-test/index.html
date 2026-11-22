@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Car test</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;width:100vw;height:100vh}#info{position:fixed;left:8px;bottom:6px;color:#fff;font:12px monospace}</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/", "rapier": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.19.3/rapier.mjs" } }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="info"></div>
+<script type="module">
+import * as THREE from 'three';
+import { Assets } from '../../src/core/assets.js';
+const params = new URLSearchParams(location.search);
+const kind = params.get('car') || 'convertible';
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(1);
+renderer.setSize(innerWidth, innerHeight, false);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.AgXToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.05, 500);
+const assets = new Assets(renderer);
+const _tex = Assets.prototype.texture;
+assets.texture = function (path, o) { return _tex.call(this, path.startsWith('assets/') ? '../../' + path : path, o); };
+const sky = await assets.hdr('../../assets/hdri/wasteland_clouds_puresky_4k.hdr');
+sky.mapping = THREE.EquirectangularReflectionMapping;
+const HDRI_SUN = new THREE.Vector3(0.802, 0.135, 0.582);
+const sunDir = new THREE.Vector3(0.3, 0.232, 0.954).normalize();
+const rot = Math.atan2(HDRI_SUN.z, HDRI_SUN.x) - Math.atan2(sunDir.z, sunDir.x);
+scene.background = sky;
+scene.backgroundRotation.set(0, rot, 0);
+scene.backgroundIntensity = 0.42;
+scene.environment = sky;
+scene.environmentRotation.set(0, rot, 0);
+scene.environmentIntensity = 0.38;
+const sun = new THREE.DirectionalLight(new THREE.Color(1.0, 0.66, 0.36), 7);
+sun.position.copy(sunDir).multiplyScalar(30);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.camera.left = sun.shadow.camera.bottom = -6;
+sun.shadow.camera.right = sun.shadow.camera.top = 6;
+sun.shadow.camera.far = 80;
+sun.shadow.bias = -0.0002;
+sun.shadow.normalBias = 0.01;
+sun.shadow.radius = 3;
+scene.add(sun, sun.target);
+const ground = await assets.pbr('asphalt_02', { repeat: 30 });
+ground.map.repeat.set(30, 30);
+const gmat = new THREE.MeshStandardMaterial({ ...ground, roughness: 1 });
+gmat.metalnessMap = null;
+const plane = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), gmat);
+plane.rotation.x = -Math.PI / 2;
+plane.receiveShadow = true;
+scene.add(plane);
+const ctx = { assets, lighting: { register() {} }, renderer, scene, camera };
+let model;
+const t0 = performance.now();
+if (kind === 'roadster') {
+  const { createRoadsterModel } = await import('../../src/vehicle/roadster/roadsterModel.js');
+  model = await createRoadsterModel({ ...ctx, base: '../../' });
+} else {
+  const { createCarModel } = await import('../../src/vehicle/carModel.js');
+  model = await createCarModel(ctx);
+}
+const buildMs = performance.now() - t0;
+scene.add(model.group);
+model.group.traverse((o) => { if (o.isMesh) o.receiveShadow = true; });
+const target = new THREE.Vector3(0, 0.6, 0);
+const VIEWS = {
+  front34: [[5.0, 1.45, -4.3], [0.1, 0.6, 0]], side: [[0.0, 1.0, -8.2], [0, 0.65, 0]], rear34: [[-5.2, 1.6, -4.1], [-0.2, 0.6, 0]], top: [[0.01, 10, 0], [0, 0, 0]],
+  frontClose: [[3.5, 0.95, -1.1], [2.0, 0.55, -0.35]], wheel: [[1.6, 0.5, -2.1], [1.41, 0.35, -0.9]], interior: [[-1.75, 1.75, -1.05], [0.35, 0.7, -0.15]], rearClose: [[-3.7, 1.0, -1.5], [-2.3, 0.65, -0.35]],
+  front: [[7.5, 0.9, 0], [0, 0.6, 0]], rear: [[-7.5, 1.1, 0], [0, 0.6, 0]], cockpit: [[-0.65, 1.25, -0.37], [0.6, 0.85, -0.37]], door: [[-1.4, 1.5, -2.6], [0.1, 0.7, -0.6]],
+  low: [[4.2, 0.35, -3.2], [0, 0.45, 0]], walk: [[-0.9, 1.65, -2.4], [0.4, 0.75, -0.7]],
+};
+window.view = (name) => { const v = VIEWS[name]; camera.position.set(...v[0]); target.set(...v[1]); camera.lookAt(target); };
+window.cam = (p, t) => { camera.position.set(...p); target.set(...t); camera.lookAt(target); };
+window.model = model;
+window.roof = (v) => model.setRoof(v);
+window.lights = (o) => model.setLights({ brake: 0, reverse: false, beam: false, ...o });
+window.stats = () => { renderer.info.autoReset = false; renderer.info.reset(); renderer.render(scene, camera); const r = { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, buildMs: Math.round(buildMs) }; renderer.info.autoReset = true; return r; };
+window.sunAt = (x, y, z) => { sun.position.set(x, y, z); };
+view('front34');
+lights({});
+let last = performance.now();
+function frame() {
+  requestAnimationFrame(frame);
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  if (model.update) model.update(dt);
+  renderer.render(scene, camera);
+}
+frame();
+document.getElementById('info').textContent = kind;
+window.__ready = true;
+</script>
+</body>
+</html>
