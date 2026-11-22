@@ -396,7 +396,7 @@ async function boot() {
   window.addEventListener('keydown', (e) => {
     if (mode !== 'playing' || paused || e.defaultPrevented) return;
     if (photo && photo.active) {
-      if (e.code === 'Escape' || e.code === 'KeyP') setPhoto(false);
+      if (e.code === 'KeyP') setPhoto(false);
       else if (e.code === 'Enter' || e.code === 'NumpadEnter') photo.take();
       return;
     }

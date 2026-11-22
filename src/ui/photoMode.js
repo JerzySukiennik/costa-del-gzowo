@@ -100,7 +100,7 @@ export function createPhotoMode(api) {
 
   const panel = el('aside', { id: 'photo', 'aria-label': 'Photo mode' },
     el('header', { class: 'lk-head' }, el('h2', { text: 'Photo mode' }),
-      el('span', { class: 'lk-hint', text: 'Time stands still. Click the picture to fly: W A S D move, Q and E go down and up, Shift is fast, the wheel zooms. Enter takes the photo, P or Esc leaves.' })),
+      el('span', { class: 'lk-hint', text: 'Time stands still. Click the picture to fly: W A S D move, Q and E go down and up, Shift is fast, the wheel zooms. Esc frees the cursor for this panel and the camera stays where it is. Enter takes the photo, P leaves.' })),
     el('section', { class: 'lk-group' }, el('h3', { text: 'Look' }), lookGrid, slider('time', 'Time of day, golden hour to night', 0, 1, 0.01, 2)),
     el('section', { class: 'lk-group' }, el('h3', { text: 'Lens' }),
       slider('fov', 'Field of view', 12, 100, 1, 0, '°'), slider('tilt', 'Tilt', -45, 45, 1, 0, '°'),
