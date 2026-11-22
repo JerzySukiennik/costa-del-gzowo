@@ -207,12 +207,13 @@ void main() {
 }`;
 const IMPOSTOR_FRAG = `
 uniform sampler2D map;
+uniform vec3 uDay;
 varying vec2 vUv;
 varying float vShade;
 void main() {
   vec4 c = texture2D(map, vUv);
   if (c.a < 0.45) discard;
-  gl_FragColor = vec4(c.rgb / max(c.a, 0.45) * vShade, 1.0);
+  gl_FragColor = vec4(c.rgb / max(c.a, 0.45) * vShade * uDay, 1.0);
 }`;
 const IMPOSTOR_DEPTH_FRAG = `
 #include <packing>
@@ -238,7 +239,7 @@ function bakeImpostor(ctx, parts, size, yaw, cell) {
   target.texture.colorSpace = THREE.NoColorSpace;
   const stage = new THREE.Scene();
   stage.environment = ctx.scene.environment;
-  const sun = new THREE.DirectionalLight(lighting.sunTint, lighting.sunColor.r / lighting.sunTint.r);
+  const sun = new THREE.DirectionalLight(lighting.sunTint, lighting.sunIntensity);
   sun.position.copy(lighting.sunDirection).multiplyScalar(60);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
@@ -291,7 +292,7 @@ function bakeImpostor(ctx, parts, size, yaw, cell) {
 
 function captureImpostor(ctx, parts, size, yaw, cell) {
   const target = bakeImpostor(ctx, parts, size, yaw, cell);
-  const uniforms = { map: { value: target.texture }, uFrames: { value: 8 }, uSize: { value: new THREE.Vector2(size.x, size.y) } };
+  const uniforms = { map: { value: target.texture }, uFrames: { value: 8 }, uSize: { value: new THREE.Vector2(size.x, size.y) }, uDay: { value: ctx.lighting.dayTint } };
   const material = new THREE.ShaderMaterial({ vertexShader: IMPOSTOR_VERT, fragmentShader: IMPOSTOR_FRAG, uniforms, toneMapped: false });
   material.userData = { parts, size, yaw, target, cell, depth: new THREE.ShaderMaterial({ vertexShader: IMPOSTOR_VERT, fragmentShader: IMPOSTOR_DEPTH_FRAG, uniforms }) };
   return material;

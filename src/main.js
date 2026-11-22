@@ -59,6 +59,8 @@ async function startWater(ctx, obstacles) {
 async function boot() {
   let quality = params.get('quality') || localStorage.getItem('costa-quality') || 'ultra';
   if (!QUALITY[quality]) quality = 'ultra';
+  let timeMode = params.get('time') || localStorage.getItem('costa-time') || 'cycle';
+  if (!['cycle', 'golden', 'night'].includes(timeMode)) timeMode = 'cycle';
   let volume = stored('costa-volume', 0.8);
   let musicVolume = stored('costa-music', 0.6);
   let avatar = params.get('avatar') || localStorage.getItem('costa-avatar') || 'default';
@@ -95,6 +97,11 @@ async function boot() {
     onResume: () => hooks.resume && hooks.resume(),
     onResetCar: () => hooks.resetCar && hooks.resetCar(),
     onQuality: (value) => hooks.quality && hooks.quality(value),
+    time: timeMode,
+    onTime: (value) => {
+      timeMode = value;
+      localStorage.setItem('costa-time', value);
+    },
     onVolume: (value) => hooks.volume && hooks.volume(value),
     onMusicVolume: (value) => hooks.musicVolume && hooks.musicVolume(value),
     onMenuClose: () => hooks.resume && hooks.resume(),
@@ -451,9 +458,28 @@ async function boot() {
     }
   }
 
+  const DAY_LENGTH = 18 * 60;
+  let nightOverride = null;
+  function nightNow() {
+    if (nightOverride !== null) return nightOverride;
+    if (photo && photo.active) return photo.state.time;
+    if (timeMode === 'golden') return 0;
+    if (timeMode === 'night') return 1;
+    const t = ((Date.now() / 1000) % DAY_LENGTH) / DAY_LENGTH;
+    if (t < 0.5) return 0;
+    if (t < 0.62) return (t - 0.5) / 0.12;
+    if (t < 0.88) return 1;
+    return 1 - (t - 0.88) / 0.12;
+  }
+
   function renderFrame(dt) {
     renderer.info.reset();
     ctx.time.value = elapsed;
+    lighting.setNight(nightNow());
+    pipeline.night = lighting.night;
+    pipeline.fogMat.uniforms.uSunColor.value.copy(lighting.sunColor);
+    pipeline.fogMat.uniforms.uSkyColor.value.copy(lighting.fogSky);
+    if (water.params && water.params.causticStrength !== undefined) water.params.causticStrength = 1 - 0.9 * lighting.night;
     if (photo && photo.active) ctx.grass.update(camera.position);
     else {
       updateFade(dt);
@@ -555,6 +581,7 @@ async function boot() {
   photo = createPhotoMode({
     camera, input, canvas, heightAt,
     baseLook: () => look.values,
+    night: () => lighting.night,
     previewLook: (id) => look.preview(id),
     applyLook: (values) => (pipeline.look = values),
     setFocus: (distance) => (pipeline.focus = distance),
@@ -675,6 +702,15 @@ async function boot() {
     },
     get quality() {
       return quality;
+    },
+    get night() {
+      return lighting.night;
+    },
+    setTime(value) {
+      timeMode = value;
+    },
+    setNight(value) {
+      nightOverride = value;
     },
     setQuality(value) {
       hooks.quality(value);

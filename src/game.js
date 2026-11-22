@@ -311,7 +311,7 @@ export async function createGame(ctx) {
     if (statues) statues.update(dt, camera);
     props.update(dt, elapsed, game.water);
     const braking = car.state.occupied && !car.state.reverse ? car.state.brake : car.state.reverse ? car.state.brake : 0;
-    carModel.setLights({ brake: braking > 0.05 ? 1 : 0, reverse: car.state.reverse && car.state.occupied, beam: game.beams });
+    carModel.setLights({ brake: braking > 0.05 ? 1 : 0, reverse: car.state.reverse && car.state.occupied, beam: game.beams || (car.state.occupied && ctx.lighting.night > 0.5) });
     player.sync(dt, { steer: car.state.steer / 0.6, throttle: car.state.throttle });
     tyreEffects(dt);
     waterHooks(dt);

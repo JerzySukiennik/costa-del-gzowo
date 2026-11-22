@@ -369,8 +369,11 @@ export async function createBlobHead({ base, bones, lighting, parent }) {
     vertTex.needsUpdate = true;
   }
 
+  const ambient = lighting.ambientCube();
   mesh.onBeforeRender = (renderer, _scene, camera) => {
     const t0 = performance.now();
+    uniforms.uSunColor.value.set(lighting.sunColor.r, lighting.sunColor.g, lighting.sunColor.b);
+    for (let k = 0; k < 6; k++) uniforms.uAmb.value[k].copy(ambient[k]).multiplyScalar(lighting.ambientScale ?? 1);
     skin();
     shR.setFromMatrix4(headMatrix).transpose();
     uniforms.uShRot.value.copy(A).multiply(shR);

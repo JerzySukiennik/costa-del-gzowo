@@ -22,7 +22,7 @@ function el(tag, props = {}, ...kids) {
 
 export function createPhotoMode(api) {
   const { camera, input, canvas } = api;
-  const state = { fov: 50, tilt: 0, dof: 0, focus: 12, look: null, hide: false, detail: true, size: 'uhd' };
+  const state = { fov: 50, tilt: 0, dof: 0, focus: 12, time: 0, look: null, hide: false, detail: true, size: 'uhd' };
   const euler = new THREE.Euler(0, 0, 0, 'YXZ');
   const forward = new THREE.Vector3();
   const right = new THREE.Vector3();
@@ -101,7 +101,7 @@ export function createPhotoMode(api) {
   const panel = el('aside', { id: 'photo', 'aria-label': 'Photo mode' },
     el('header', { class: 'lk-head' }, el('h2', { text: 'Photo mode' }),
       el('span', { class: 'lk-hint', text: 'Time stands still. Click the picture to fly: W A S D move, Q and E go down and up, Shift is fast, the wheel zooms. Enter takes the photo, P or Esc leaves.' })),
-    el('section', { class: 'lk-group' }, el('h3', { text: 'Look' }), lookGrid),
+    el('section', { class: 'lk-group' }, el('h3', { text: 'Look' }), lookGrid, slider('time', 'Time of day, golden hour to night', 0, 1, 0.01, 2)),
     el('section', { class: 'lk-group' }, el('h3', { text: 'Lens' }),
       slider('fov', 'Field of view', 12, 100, 1, 0, '°'), slider('tilt', 'Tilt', -45, 45, 1, 0, '°'),
       slider('dof', 'Background blur', 0, 1, 0.01, 2), slider('focus', 'Focus distance', 1, 300, 0.5, 1, ' m'), focusMe),
@@ -198,6 +198,7 @@ export function createPhotoMode(api) {
       state.fov = Math.round(camera.fov);
       state.tilt = 0;
       state.look = null;
+      state.time = api.night();
       state.focus = Math.min(300, Math.max(1, camera.position.distanceTo(api.playerPosition())));
       state.hide = false;
       status.textContent = '';

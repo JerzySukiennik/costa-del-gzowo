@@ -6,6 +6,7 @@ import { heightAt } from '../world/heightfield.js';
 const INK = '#f6f1e7';
 const AMBER = '#f2a23a';
 const TABS = [['map', 'Map'], ['avatar', 'Avatar'], ['garage', 'Garage'], ['settings', 'Settings']];
+const TIMES = [['cycle', 'Day and night'], ['golden', 'Golden hour'], ['night', 'Night']];
 const QUALITY = [['extreme', 'Extreme'], ['cinematic', 'Cinematic'], ['ultra', 'Ultra'], ['high', 'High'], ['medium', 'Medium'], ['low', 'Low']];
 const FOOT = [['Move', ['W', 'A', 'S', 'D']], ['Camera', ['Mouse']], ['Sprint', ['Shift']], ['Jump', ['Space']], ['Enter car', ['F']]];
 const CAR = [['Throttle and brake', ['W', 'S']], ['Steer', ['A', 'D']], ['Handbrake', ['Space']], ['Exit car', ['F']], ['Radio', ['Q', 'E']], ['Roof', ['T']], ['Lights', ['H']], ['Camera', ['C']], ['Reset car', ['R']]];
@@ -56,6 +57,7 @@ export function createScreens(options = {}) {
   };
   const values = {
     quality: QUALITY.some(([v]) => v === cfg.quality) ? cfg.quality : 'ultra',
+    time: TIMES.some(([v]) => v === cfg.time) ? cfg.time : 'cycle',
     volume: unit(cfg.volume, 0.8),
     musicVolume: unit(cfg.musicVolume, 0.6),
   };
@@ -101,10 +103,30 @@ export function createScreens(options = {}) {
   }
 
   function stepSegment(button, dir) {
-    const i = QUALITY.findIndex(([v]) => v === values.quality);
-    const next = QUALITY[clamp(i + dir, 0, QUALITY.length - 1)][0];
-    setQuality(next);
-    button.parentElement.querySelector(`[data-value="${next}"]`).focus({ preventScroll: true });
+    const buttons = [...button.parentElement.children];
+    const next = buttons[clamp(buttons.indexOf(button) + dir, 0, buttons.length - 1)];
+    next.click();
+    next.focus({ preventScroll: true });
+  }
+
+  function buildTime() {
+    const buttons = TIMES.map(([value, label]) => el('button', {
+      type: 'button', class: 'sc-seg-btn', role: 'radio', 'data-value': value, 'data-nav': '', onclick: () => {
+        if (value === values.time) return;
+        values.time = value;
+        cb('onTime', value);
+        sync();
+      },
+    }, label));
+    syncers.push(() => buttons.forEach((b) => {
+      const on = b.dataset.value === values.time;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on ? 0 : -1;
+    }));
+    return el('div', { class: 'sc-field' },
+      el('div', { class: 'sc-row' }, el('span', { text: 'Time of day' })),
+      el('div', { class: 'sc-seg sc-seg-grid', role: 'radiogroup', 'aria-label': 'Time of day' }, buttons));
   }
 
   function buildQuality() {
@@ -125,6 +147,7 @@ export function createScreens(options = {}) {
   function buildSettings() {
     return el('div', { class: 'sc-settings' },
       buildQuality(),
+      buildTime(),
       buildSlider('Volume', 'volume', (v) => cb('onVolume', v)),
       buildSlider('Music', 'musicVolume', (v) => cb('onMusicVolume', v)));
   }

@@ -404,7 +404,7 @@ async function open(target, quality) {
     if (m.type() === 'error') console.log('[console]', m.text().slice(0, 300));
   });
   const sep = target.includes('?') ? '&' : '?';
-  await page.goto(`${target}${sep}auto=1&solo=1&quality=${quality}`, { waitUntil: 'load' });
+  await page.goto(`${target}${sep}auto=1&solo=1&time=golden&quality=${quality}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true || window.__error, null, { timeout: 120000, polling: 250 });
   for (let attempt = 0; attempt < 8; attempt++) {
     try {
@@ -478,7 +478,7 @@ for (const quality of qualities) {
     if (m.type() === 'error') console.log('[console]', m.text().slice(0, 300));
   });
   const sep = url.includes('?') ? '&' : '?';
-  await page.goto(`${url}${sep}auto=1&solo=1&quality=${quality}`, { waitUntil: 'load' });
+  await page.goto(`${url}${sep}auto=1&solo=1&time=golden&quality=${quality}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true || window.__error, null, { timeout: 120000, polling: 250 });
   for (let attempt = 0; attempt < 8; attempt++) {
     try {

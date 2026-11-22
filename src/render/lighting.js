@@ -1,4 +1,4 @@
-// Costa del Gzowo: HDRI sky, sun with cascaded shadows (casters may switch to lighter shapes while the maps are drawn), image-based lighting and the static sun depth map.
+// Costa del Gzowo: HDRI sky, sun with cascaded shadows (casters may switch to lighter shapes while the maps are drawn), image-based lighting, the static sun depth map, and the fade from golden hour through sunset to a moonlit night with stars.
 import * as THREE from 'three';
 import { CSM } from 'three/addons/csm/CSM.js';
 import { LAYERS } from '../config.js';
@@ -151,6 +151,72 @@ export async function createLighting({ renderer, scene, camera, assets }) {
     return ambient;
   }
 
+  const golden = SUN_TINT.clone();
+  const ember = new THREE.Color(1.0, 0.34, 0.12);
+  const moon = new THREE.Color(0.46, 0.62, 1.0);
+  const tint = SUN_TINT.clone();
+  const fogSky = new THREE.Color(0.19, 0.2, 0.24);
+  const grassSky = new THREE.Color(0.34, 0.45, 0.54);
+  const dayTint = new THREE.Color(1, 1, 1);
+  const ramp = (a, b, x) => {
+    const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  let night = 0;
+  let ambientScale = 1;
+
+  const starCount = 1900;
+  const starPositions = new Float32Array(starCount * 3);
+  const starColors = new Float32Array(starCount * 3);
+  let seed = 20261122;
+  const random = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  for (let i = 0; i < starCount; i++) {
+    const y = 0.03 + 0.97 * random();
+    const a = random() * Math.PI * 2;
+    const r = Math.sqrt(1 - y * y);
+    starPositions.set([Math.cos(a) * r * 3200, y * 3200, Math.sin(a) * r * 3200], i * 3);
+    const b = 0.25 + 2.6 * Math.pow(random(), 5) + 0.5 * random();
+    const warm = random();
+    starColors.set([b * (0.85 + 0.3 * warm), b, b * (1.15 - 0.3 * warm)], i * 3);
+  }
+  const starGeometry = new THREE.BufferGeometry();
+  starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+  starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+  starGeometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 3300);
+  const stars = new THREE.Points(starGeometry, new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false }));
+  stars.frustumCulled = false;
+  stars.visible = false;
+  stars.name = 'stars';
+  scene.add(stars);
+
+  function setNight(value) {
+    const n = Math.min(1, Math.max(0, value));
+    if (Math.abs(n - night) < 0.0015 && n !== 0 && n !== 1) return;
+    night = n;
+    const toEmber = ramp(0, 0.55, n);
+    const toMoon = ramp(0.45, 0.9, n);
+    const dark = ramp(0.1, 0.9, n);
+    tint.copy(golden).lerp(ember, toEmber).lerp(moon, toMoon);
+    const strength = THREE.MathUtils.lerp(1 - 0.72 * toEmber, 0.055, toMoon);
+    sunColor.copy(tint).multiplyScalar(SUN_INTENSITY * strength);
+    for (const light of csm.lights) {
+      light.color.copy(tint);
+      light.intensity = SUN_INTENSITY * strength;
+    }
+    scene.backgroundIntensity = SKY_SCALE * THREE.MathUtils.lerp(1, 0.03, dark);
+    ambientScale = THREE.MathUtils.lerp(1, 0.1, dark);
+    scene.environmentIntensity = 0.82 * ambientScale;
+    const sky = THREE.MathUtils.lerp(1, 0.07, dark);
+    fogSky.setRGB(0.19 * sky * (1 - 0.25 * dark), 0.2 * sky * (1 - 0.1 * dark), 0.24 * sky * (1 + 0.35 * dark));
+    grassSky.setRGB(0.34 * sky * (1 - 0.25 * dark), 0.45 * sky * (1 - 0.1 * dark), 0.54 * sky * (1 + 0.35 * dark));
+    dayTint.setRGB((0.72 * strength * tint.r) / golden.r + 0.28 * sky, (0.72 * strength * tint.g) / golden.g + 0.28 * sky, (0.72 * strength * tint.b) / golden.b + 0.28 * sky * (1 + 0.3 * dark));
+    stars.visible = n > 0.3;
+    stars.material.opacity = ramp(0.35, 0.95, n);
+  }
+
   let sunDepth = null;
   let tick = 0;
   let farEvery = 3;
@@ -215,6 +281,7 @@ export async function createLighting({ renderer, scene, camera, assets }) {
     sunDirection,
     sunColor,
     sunTint: SUN_TINT,
+    sunIntensity: SUN_INTENSITY,
     csm,
     register,
     registerTree,
@@ -223,7 +290,18 @@ export async function createLighting({ renderer, scene, camera, assets }) {
     get sunDepth() {
       return sunDepth;
     },
+    fogSky,
+    grassSky,
+    dayTint,
+    setNight,
+    get night() {
+      return night;
+    },
+    get ambientScale() {
+      return ambientScale;
+    },
     update() {
+      stars.position.copy(camera.position);
       csm.update();
       tick++;
       const far = csm.lights[2].shadow;
